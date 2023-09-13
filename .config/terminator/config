@@ -1,0 +1,24 @@
+[global_config]
+  suppress_multiple_term_dialog = True
+  title_use_system_font = False
+[keybindings]
+[profiles]
+  [[default]]
+    background_color = "#282828"
+    background_darkness = 0.9
+    background_type = transparent
+    cursor_color = "#aaaaaa"
+    foreground_color = "#ebdbb2"
+    palette = "#282828:#cc241d:#98971a:#d79921:#458588:#b16286:#689d6a:#a89984:#928374:#fb4934:#b8bb26:#fabd2f:#83a598:#d3869b:#8ec07c:#ebdbb2"
+  [[kali]]
+    cursor_color = "#aaaaaa"
+[layouts]
+  [[default]]
+    [[[window0]]]
+      type = Window
+      parent = ""
+    [[[child1]]]
+      type = Terminal
+      parent = window0
+      profile = default
+[plugins]
