@@ -1,5 +1,7 @@
 local group = vim.api.nvim_create_augroup("JosephNeovim", { clear = true })
 
+require("config.terminal").setup_click_handlers()
+
 vim.api.nvim_create_autocmd("TextYankPost", {
   group = group,
   desc = "Highlight yanked text",
@@ -61,6 +63,19 @@ vim.api.nvim_create_autocmd("LspAttach", {
     map("n", "<leader>df", function()
       vim.diagnostic.open_float(nil, { border = "rounded" })
     end, "Line diagnostics")
+  end,
+})
+
+vim.api.nvim_create_autocmd("TermOpen", {
+  group = group,
+  desc = "Configure terminal buffers",
+  callback = function()
+    vim.opt_local.number = false
+    vim.opt_local.relativenumber = false
+    vim.opt_local.signcolumn = "no"
+    vim.opt_local.spell = false
+    require("config.terminal").set_terminal_winbar()
+    vim.cmd.startinsert()
   end,
 })
 
