@@ -28,13 +28,13 @@ function M.set_terminal_winbar()
   vim.wo.winbar = table.concat({
     "%#TabLine#",
     "%@v:lua.TerminalOpenHorizontal@",
-    " Horizontal ",
+    " 󰤻 Horizontal ",
     "%T",
     "%@v:lua.TerminalOpenVertical@",
-    " Vertical ",
+    " 󰤼 Vertical ",
     "%T",
     "%@v:lua.TerminalCloseCurrent@",
-    " Close ",
+    " 󰅖 Close ",
     "%T",
     "%*",
   })
