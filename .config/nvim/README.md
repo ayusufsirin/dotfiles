@@ -29,6 +29,7 @@ Recommended external tools:
 - `shfmt`
 - `tree` is not required; the sidebar is provided by Neovim plugins.
 - `trouble` is provided by Neovim plugins for diagnostics, quickfix, and location lists.
+- `statuscol` is provided by Neovim plugins for clickable gutter actions.
 
 The first launch bootstraps `lazy.nvim` and Mason-managed language tools.
 
@@ -66,3 +67,4 @@ If you want to refresh plugin and tool installs later, run inside Neovim:
 - Window movement and split creation use `<C-h/j/k/l>`, `<leader>sv`, `<leader>sh`, `<leader>se`, and `<leader>sc`.
 - On startup with no file arguments, Neovim restores the current project session when one exists and opens the tree sidebar focused on the workspace.
 - If you launch Neovim with explicit file arguments, it skips automatic session restore and starts with those files only.
+- `Gitsigns` now highlights changed lines and changed line numbers, and clicking the line-number gutter opens a popup menu for hunk preview, blame, or inline blame toggling. The keyboard fallback is `<leader>gm`.

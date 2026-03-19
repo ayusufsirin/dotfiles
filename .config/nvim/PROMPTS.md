@@ -49,3 +49,9 @@ Extend /home/joseph/.dotfiles/.config/nvim for better project navigation in a mo
 ```text
 Refine the Neovim startup behavior in /home/joseph/.dotfiles/.config/nvim so it feels like a project IDE. When Neovim starts without explicit file arguments, restore the project session if one exists and open the tree sidebar focused on the workspace. When Neovim is launched with explicit file arguments, do not auto-restore a session. Keep this behavior conservative, portable, and easy to reason about.
 ```
+
+## 9. Git gutter
+
+```text
+Extend /home/joseph/.dotfiles/.config/nvim with a stronger Git gutter experience. Keep using gitsigns.nvim, but improve changed-line visibility in the number/sign columns and add a popup-style line inspection menu triggered from the gutter if practical. Prefer maintained community plugins such as statuscol.nvim and dressing.nvim before inventing custom UI, and provide a keyboard fallback for the same actions. Verify the config still starts cleanly.
+```
