@@ -42,6 +42,18 @@ function M.close_current()
   vim.cmd.close()
 end
 
+function M.next_buffer()
+  vim.cmd.bnext()
+end
+
+function M.prev_buffer()
+  vim.cmd.bprevious()
+end
+
+function M.pick_current()
+  telescope_pick_in_current_win()
+end
+
 function M.pick_horizontal()
   vim.cmd.split()
   telescope_pick_in_current_win()
@@ -55,11 +67,24 @@ end
 function M.set_file_winbar()
   vim.wo.winbar = table.concat({
     "%#TabLine#",
+    "%@v:lua.FilePrevBuffer@",
+    " 󰒮 Prev ",
+    "%T",
+    "%@v:lua.FileNextBuffer@",
+    " 󰒭 Next ",
+    "%T",
+    "%@v:lua.FilePickCurrent@",
+    " 󰱼 Pick ",
+    "%T",
+    "%#TabLineSel#",
+    " %<%t %m ",
+    "%#TabLine#",
+    "%=",
     "%@v:lua.FileOpenHorizontal@",
-    " 󰤻 Horizontal ",
+    " 󰤻 Split H ",
     "%T",
     "%@v:lua.FileOpenVertical@",
-    " 󰤼 Vertical ",
+    " 󰤼 Split V ",
     "%T",
     "%@v:lua.FilePickHorizontal@",
     " 󱂬 Pick H ",
@@ -75,6 +100,18 @@ function M.set_file_winbar()
 end
 
 function M.setup_click_handlers()
+  _G.FilePrevBuffer = function()
+    require("config.splitview").prev_buffer()
+  end
+
+  _G.FileNextBuffer = function()
+    require("config.splitview").next_buffer()
+  end
+
+  _G.FilePickCurrent = function()
+    require("config.splitview").pick_current()
+  end
+
   _G.FileOpenHorizontal = function()
     require("config.splitview").open_horizontal()
   end

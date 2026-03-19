@@ -80,7 +80,7 @@ vim.api.nvim_create_autocmd("TermOpen", {
   end,
 })
 
-vim.api.nvim_create_autocmd({ "BufWinEnter", "WinEnter" }, {
+vim.api.nvim_create_autocmd({ "BufEnter", "BufFilePost", "BufModifiedSet", "BufWinEnter", "WinEnter" }, {
   group = group,
   desc = "Configure file buffer winbar",
   callback = function(args)
