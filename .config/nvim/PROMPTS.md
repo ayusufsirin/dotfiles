@@ -1,0 +1,33 @@
+# Codex prompts
+
+Use these prompts in future Codex sessions to keep evolving this Neovim setup without losing the current design.
+
+## 1. Audit and tighten
+
+```text
+Review my Neovim config in /home/joseph/.dotfiles/.config/nvim as a terminal IDE setup. Focus on bugs, startup failures, missing dependencies, poor defaults, and portability problems. Fix issues directly, keep the config Lua-based and git-friendly, and verify with headless Neovim commands when possible. Do not redesign everything from scratch.
+```
+
+## 2. Python and reStructuredText
+
+```text
+Extend /home/joseph/.dotfiles/.config/nvim for serious Python and reStructuredText work. Keep the existing structure. Improve Python refactoring, testing, virtualenv discovery, debug workflows, docstring/snippet support, and RST authoring ergonomics. Add only plugins and tools that materially improve editing quality, explain external dependencies, and verify the config still starts cleanly.
+```
+
+## 3. C and C++
+
+```text
+Upgrade /home/joseph/.dotfiles/.config/nvim for C and C++ development in the terminal. Keep clangd and DAP working, improve compile_commands.json handling, add useful build/test shortcuts for CMake and Make projects, and make debugging smoother without turning the config into a GUI IDE clone. Verify keymaps and startup.
+```
+
+## 4. Writing workflow
+
+```text
+Improve Markdown, YAML, and reStructuredText editing in /home/joseph/.dotfiles/.config/nvim. Optimize for technical writing in the terminal: preview-friendly formatting, spell/wrap defaults, linting, link navigation, and table/list ergonomics. Keep the setup portable and avoid heavyweight plugins unless they clearly pay for themselves.
+```
+
+## 5. Minimalism pass
+
+```text
+Reduce complexity in /home/joseph/.dotfiles/.config/nvim without losing the current IDE features I use for Python, Markdown, RST, YAML, C, and C++. Remove plugins or settings that do not materially help, simplify keymaps, and keep the result maintainable for long-term dotfiles usage.
+```
