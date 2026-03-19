@@ -1,6 +1,10 @@
 local opt = vim.opt
 
 opt.termguicolors = true
+opt.mouse = "a"
+opt.mousemodel = "extend"
+opt.mousescroll = "ver:3,hor:6"
+opt.smoothscroll = true
 opt.number = true
 opt.relativenumber = true
 opt.signcolumn = "yes"

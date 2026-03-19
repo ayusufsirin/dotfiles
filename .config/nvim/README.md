@@ -13,6 +13,7 @@ The config is stored directly in the dotfiles repo and can be symlinked into `~/
 ## Requirements
 
 This configuration targets a modern Neovim build, ideally `0.10+`.
+It is configured for mouse-driven editing in the terminal and uses a tree-style file sidebar instead of a floating explorer.
 
 Recommended external tools:
 
@@ -25,6 +26,7 @@ Recommended external tools:
 - `clang-format`
 - `shellcheck`
 - `shfmt`
+- `tree` is not required; the sidebar is provided by Neovim plugins.
 
 The first launch bootstraps `lazy.nvim` and Mason-managed language tools.
 
@@ -54,3 +56,5 @@ If you want to refresh plugin and tool installs later, run inside Neovim:
 - C and C++ use `clangd`, `clang-format`, and a `codelldb` debugging baseline.
 - Markdown and reStructuredText get wrap/spell/textwidth-friendly filetype settings, and reStructuredText can be linted with `rstcheck`.
 - YAML uses `yamlls` plus schema support from `schemastore.nvim`, with formatting through `prettier`.
+- Mouse support is enabled for clicking, scrolling, split resizing, and window selection.
+- `NvimTree` provides the persistent left sidebar, with `<leader>e` to toggle it and `<leader>E` to reveal the current file.

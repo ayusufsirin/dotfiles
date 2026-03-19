@@ -31,3 +31,9 @@ Improve Markdown, YAML, and reStructuredText editing in /home/joseph/.dotfiles/.
 ```text
 Reduce complexity in /home/joseph/.dotfiles/.config/nvim without losing the current IDE features I use for Python, Markdown, RST, YAML, C, and C++. Remove plugins or settings that do not materially help, simplify keymaps, and keep the result maintainable for long-term dotfiles usage.
 ```
+
+## 6. Mouse and tree sidebar
+
+```text
+Update /home/joseph/.dotfiles/.config/nvim to feel more like a mouse-friendly terminal IDE. Enable sensible mouse behavior for clicking, scrolling, split resizing, and window selection. Replace the current file explorer with a persistent NERDTree-like sidebar, preferably nvim-tree.lua, and wire up clear keymaps for toggling the tree, focusing it, and revealing the current file. Keep the config portable and verify with headless Neovim if possible.
+```
