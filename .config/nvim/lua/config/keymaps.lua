@@ -13,6 +13,7 @@ map("n", "<leader>pl", "<cmd>lua require('persistence').load({ last = true })<CR
 map("n", "<leader>pd", "<cmd>lua require('persistence').stop()<CR>", { desc = "Stop session save" })
 map("n", "<leader>ss", "<cmd>lua require('persistence').save()<CR>", { desc = "Save session" })
 map("n", "<leader>xx", "<cmd>Trouble diagnostics toggle focus=true<CR>", { desc = "Diagnostics list" })
+map("n", "<leader>xb", "<cmd>Trouble diagnostics toggle focus=true filter.buf=0<CR>", { desc = "Buffer diagnostics list" })
 map("n", "<leader>xq", "<cmd>Trouble quickfix toggle focus=true<CR>", { desc = "Quickfix list" })
 map("n", "<leader>xl", "<cmd>Trouble loclist toggle focus=true<CR>", { desc = "Location list" })
 map("n", "<leader>xL", "<cmd>lopen<CR>", { desc = "Open location list" })

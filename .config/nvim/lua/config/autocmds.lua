@@ -2,6 +2,7 @@ local group = vim.api.nvim_create_augroup("JosephNeovim", { clear = true })
 
 require("config.terminal").setup_click_handlers()
 require("config.splitview").setup_click_handlers()
+require("config.diagnostics").setup_click_handlers()
 
 vim.api.nvim_create_autocmd("TextYankPost", {
   group = group,
@@ -92,7 +93,38 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufFilePost", "BufModifiedSet", "BufW
       return
     end
 
+    require("config.diagnostics").sync_to_buffer(bufnr)
     require("config.splitview").set_file_winbar()
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "BufWinEnter", "WinEnter" }, {
+  group = group,
+  desc = "Configure diagnostics window winbar",
+  callback = function(args)
+    local bufnr = args.buf
+    if vim.bo[bufnr].filetype ~= "trouble" then
+      return
+    end
+
+    local winid = vim.fn.bufwinid(bufnr)
+    if winid ~= -1 then
+      require("config.diagnostics").set_trouble_winbar(winid)
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "BufWinLeave", "WinClosed" }, {
+  group = group,
+  desc = "Refresh statusline after diagnostics window closes",
+  callback = function()
+    vim.schedule(function()
+      if package.loaded["lualine"] then
+        require("lualine").refresh()
+      else
+        vim.cmd.redrawstatus()
+      end
+    end)
   end,
 })
 
