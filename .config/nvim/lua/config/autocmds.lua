@@ -64,6 +64,52 @@ vim.api.nvim_create_autocmd("LspAttach", {
   end,
 })
 
+vim.api.nvim_create_autocmd("VimEnter", {
+  group = group,
+  desc = "Restore sessions and open tree for workspace starts",
+  callback = function()
+    local function load_plugin(plugin)
+      local ok, lazy = pcall(require, "lazy")
+      if ok then
+        lazy.load({ plugins = { plugin } })
+      end
+    end
+
+    local argc = vim.fn.argc()
+    local tree_mode = false
+    local restore_session = false
+
+    if argc == 0 then
+      tree_mode = true
+      restore_session = true
+    elseif argc == 1 then
+      local arg0 = vim.fn.argv(0)
+      if arg0 ~= "" and vim.fn.isdirectory(arg0) == 1 then
+        tree_mode = true
+        restore_session = true
+      end
+    end
+
+    if restore_session then
+      load_plugin("persistence.nvim")
+      local ok, persistence = pcall(require, "persistence")
+      if ok then
+        persistence.load()
+      end
+    end
+
+    if tree_mode then
+      load_plugin("nvim-tree.lua")
+      local ok, api = pcall(require, "nvim-tree.api")
+      if ok and not api.tree.is_visible() then
+        api.tree.open({
+          focus = true,
+        })
+      end
+    end
+  end,
+})
+
 vim.diagnostic.config({
   severity_sort = true,
   float = {

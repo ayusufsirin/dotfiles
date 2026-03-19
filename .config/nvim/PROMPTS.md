@@ -43,3 +43,9 @@ Update /home/joseph/.dotfiles/.config/nvim to feel more like a mouse-friendly te
 ```text
 Extend /home/joseph/.dotfiles/.config/nvim for better project navigation in a mouse-friendly terminal IDE. Keep the current tree sidebar and mouse support, then add practical project switching, session restore, split/window movement, and diagnostics/quickfix/location-list workflows. Prefer lightweight plugins that materially improve navigation, keep the Lua/lazy.nvim structure, update docs and prompt notes, and verify with headless Neovim.
 ```
+
+## 8. Startup behavior
+
+```text
+Refine the Neovim startup behavior in /home/joseph/.dotfiles/.config/nvim so it feels like a project IDE. When Neovim starts without explicit file arguments, restore the project session if one exists and open the tree sidebar focused on the workspace. When Neovim is launched with explicit file arguments, do not auto-restore a session. Keep this behavior conservative, portable, and easy to reason about.
+```

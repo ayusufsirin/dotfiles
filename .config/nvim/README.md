@@ -64,3 +64,5 @@ If you want to refresh plugin and tool installs later, run inside Neovim:
 - `persistence.nvim` provides session restore and save commands with `<leader>ps`, `<leader>pl`, and `<leader>ss`.
 - `Trouble` powers diagnostics, quickfix, and location-list sidebars with `<leader>xx`, `<leader>xq`, and `<leader>xl`.
 - Window movement and split creation use `<C-h/j/k/l>`, `<leader>sv`, `<leader>sh`, `<leader>se`, and `<leader>sc`.
+- On startup with no file arguments, Neovim restores the current project session when one exists and opens the tree sidebar focused on the workspace.
+- If you launch Neovim with explicit file arguments, it skips automatic session restore and starts with those files only.
