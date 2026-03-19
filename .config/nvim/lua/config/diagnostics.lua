@@ -31,6 +31,7 @@ local severity_map = {
 }
 
 local source_bufnr = nil
+local active_level = nil
 
 local function refresh_statusline()
   if package.loaded["lualine"] then
@@ -112,6 +113,8 @@ function M.close_all()
     end
   end
 
+  active_level = nil
+
   refresh_statusline()
 end
 
@@ -139,6 +142,7 @@ function M.open_for_buf(level, bufnr, opts)
   end
 
   M.set_source_bufnr(bufnr)
+  active_level = level
 
   local mode = mode_names[level]
   if M.count(level, bufnr) == 0 then
@@ -185,12 +189,11 @@ function M.sync_to_buffer(bufnr)
   end
 
   M.set_source_bufnr(bufnr)
-  local active = M.active_level(M.active_winid())
-  if not active then
+  if not active_level then
     return
   end
 
-  M.open_for_buf(active, bufnr, { notify_empty = false, close_on_empty = true })
+  M.open_for_buf(active_level, bufnr, { notify_empty = false, close_on_empty = true })
 end
 
 function M.toggle(level)
@@ -202,6 +205,7 @@ function M.toggle(level)
   local mode = mode_names[level]
   if trouble.is_open(mode) then
     trouble.close(mode)
+    active_level = nil
     refresh_statusline()
     return
   end
