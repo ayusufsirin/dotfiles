@@ -1,6 +1,7 @@
 local group = vim.api.nvim_create_augroup("JosephNeovim", { clear = true })
 
 require("config.terminal").setup_click_handlers()
+require("config.splitview").setup_click_handlers()
 
 vim.api.nvim_create_autocmd("TextYankPost", {
   group = group,
@@ -76,6 +77,22 @@ vim.api.nvim_create_autocmd("TermOpen", {
     vim.opt_local.spell = false
     require("config.terminal").set_terminal_winbar()
     vim.cmd.startinsert()
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "BufWinEnter", "WinEnter" }, {
+  group = group,
+  desc = "Configure file buffer winbar",
+  callback = function(args)
+    local bufnr = args.buf
+    local bt = vim.bo[bufnr].buftype
+    local ft = vim.bo[bufnr].filetype
+
+    if bt ~= "" or ft == "NvimTree" then
+      return
+    end
+
+    require("config.splitview").set_file_winbar()
   end,
 })
 
