@@ -3,6 +3,7 @@ return {
   require("plugins.core"),
   require("plugins.files"),
   require("plugins.telescope"),
+  require("plugins.navigation"),
   require("plugins.treesitter"),
   require("plugins.completion"),
   require("plugins.lsp"),

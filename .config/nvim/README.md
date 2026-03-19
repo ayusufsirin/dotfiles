@@ -14,6 +14,7 @@ The config is stored directly in the dotfiles repo and can be symlinked into `~/
 
 This configuration targets a modern Neovim build, ideally `0.10+`.
 It is configured for mouse-driven editing in the terminal and uses a tree-style file sidebar instead of a floating explorer.
+It also adds project switching, session restore, and diagnostics/quickfix sidebars for IDE-like navigation.
 
 Recommended external tools:
 
@@ -27,6 +28,7 @@ Recommended external tools:
 - `shellcheck`
 - `shfmt`
 - `tree` is not required; the sidebar is provided by Neovim plugins.
+- `trouble` is provided by Neovim plugins for diagnostics, quickfix, and location lists.
 
 The first launch bootstraps `lazy.nvim` and Mason-managed language tools.
 
@@ -58,3 +60,7 @@ If you want to refresh plugin and tool installs later, run inside Neovim:
 - YAML uses `yamlls` plus schema support from `schemastore.nvim`, with formatting through `prettier`.
 - Mouse support is enabled for clicking, scrolling, split resizing, and window selection.
 - `NvimTree` provides the persistent left sidebar, with `<leader>e` to toggle it and `<leader>E` to reveal the current file.
+- `Telescope projects` and `<leader>pp` switch between projects.
+- `persistence.nvim` provides session restore and save commands with `<leader>ps`, `<leader>pl`, and `<leader>ss`.
+- `Trouble` powers diagnostics, quickfix, and location-list sidebars with `<leader>xx`, `<leader>xq`, and `<leader>xl`.
+- Window movement and split creation use `<C-h/j/k/l>`, `<leader>sv`, `<leader>sh`, `<leader>se`, and `<leader>sc`.

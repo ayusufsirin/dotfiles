@@ -37,3 +37,9 @@ Reduce complexity in /home/joseph/.dotfiles/.config/nvim without losing the curr
 ```text
 Update /home/joseph/.dotfiles/.config/nvim to feel more like a mouse-friendly terminal IDE. Enable sensible mouse behavior for clicking, scrolling, split resizing, and window selection. Replace the current file explorer with a persistent NERDTree-like sidebar, preferably nvim-tree.lua, and wire up clear keymaps for toggling the tree, focusing it, and revealing the current file. Keep the config portable and verify with headless Neovim if possible.
 ```
+
+## 7. Project navigation
+
+```text
+Extend /home/joseph/.dotfiles/.config/nvim for better project navigation in a mouse-friendly terminal IDE. Keep the current tree sidebar and mouse support, then add practical project switching, session restore, split/window movement, and diagnostics/quickfix/location-list workflows. Prefer lightweight plugins that materially improve navigation, keep the Lua/lazy.nvim structure, update docs and prompt notes, and verify with headless Neovim.
+```
