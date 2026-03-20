@@ -1,4 +1,12 @@
 local map = vim.keymap.set
+local function visual_range()
+  local start_line = vim.fn.line(".")
+  local end_line = vim.fn.line("v")
+  if start_line > end_line then
+    start_line, end_line = end_line, start_line
+  end
+  return { start_line, end_line }
+end
 
 map("n", "<Esc>", "<cmd>nohlsearch<CR>")
 map("n", "<leader>w", "<cmd>w<CR>", { desc = "Save file" })
@@ -70,7 +78,23 @@ map("n", "<leader>gb", "<cmd>Gitsigns blame_line<CR>", { desc = "Git blame line"
 map("n", "<leader>gm", function()
   require("config.gitinspect").open_menu()
 end, { desc = "Git line actions" })
+map({ "n", "v" }, "]h", function()
+  require("gitsigns").next_hunk()
+end, { desc = "Next git hunk" })
+map({ "n", "v" }, "[h", function()
+  require("gitsigns").prev_hunk()
+end, { desc = "Previous git hunk" })
 map("n", "<leader>gp", "<cmd>Gitsigns preview_hunk<CR>", { desc = "Preview hunk" })
 map("n", "<leader>gs", "<cmd>Gitsigns stage_hunk<CR>", { desc = "Stage hunk" })
+map("v", "<leader>gs", function()
+  require("gitsigns").stage_hunk(visual_range())
+end, { desc = "Stage selected lines" })
+map("n", "<leader>gS", "<cmd>Gitsigns stage_buffer<CR>", { desc = "Stage buffer" })
 map("n", "<leader>gr", "<cmd>Gitsigns reset_hunk<CR>", { desc = "Reset hunk" })
+map("v", "<leader>gr", function()
+  require("gitsigns").reset_hunk(visual_range())
+end, { desc = "Reset selected lines" })
+map("n", "<leader>gR", "<cmd>Gitsigns reset_buffer<CR>", { desc = "Reset buffer" })
+map("n", "<leader>gu", "<cmd>Gitsigns undo_stage_hunk<CR>", { desc = "Undo staged hunk" })
+map({ "o", "x" }, "ih", "<cmd>Gitsigns select_hunk<CR>", { desc = "Git hunk text object" })
 map("n", "<leader>td", "<cmd>TodoTelescope<CR>", { desc = "Todo search" })
