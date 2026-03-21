@@ -118,6 +118,7 @@ return {
         git = {
           enable = true,
           ignore = false,
+          timeout = 2000,
         },
         diagnostics = {
           enable = true,

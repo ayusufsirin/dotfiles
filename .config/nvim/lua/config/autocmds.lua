@@ -114,6 +114,18 @@ vim.api.nvim_create_autocmd({ "BufWinEnter", "WinEnter" }, {
   end,
 })
 
+vim.api.nvim_create_autocmd({ "BufWinEnter", "WinEnter", "WinNew" }, {
+  group = group,
+  desc = "Configure Git popup winbar",
+  callback = function()
+    vim.schedule(function()
+      for _, winid in ipairs(vim.api.nvim_list_wins()) do
+        require("config.gitinspect").set_popup_winbar(winid)
+      end
+    end)
+  end,
+})
+
 vim.api.nvim_create_autocmd({ "BufWinLeave", "WinClosed" }, {
   group = group,
   desc = "Refresh statusline after diagnostics window closes",
