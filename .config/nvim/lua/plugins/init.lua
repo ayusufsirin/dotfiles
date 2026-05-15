@@ -9,5 +9,6 @@ return {
   require("plugins.lsp"),
   require("plugins.formatting"),
   require("plugins.git"),
+  require("plugins.gitview"),
   require("plugins.dap"),
 }

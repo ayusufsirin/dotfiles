@@ -75,6 +75,8 @@ map("n", "<leader>bc", "<cmd>bdelete<CR>", { desc = "Close current buffer tab" }
 map("n", "<leader>bp", "<cmd>BufferLinePick<CR>", { desc = "Pick buffer tab" })
 map("n", "<leader>lf", "<cmd>Format<CR>", { desc = "Format buffer" })
 map("n", "<leader>gb", "<cmd>Gitsigns blame_line<CR>", { desc = "Git blame line" })
+map("n", "<leader>gv", "<cmd>Neotree git_status right toggle=true<CR>", { desc = "Git changed files" })
+map("n", "<leader>gV", "<cmd>Neotree git_status float toggle=true<CR>", { desc = "Git changed files float" })
 map("n", "<leader>gm", function()
   require("config.gitinspect").open_menu()
 end, { desc = "Git line actions" })
