@@ -14,6 +14,9 @@ require("lazy").setup(require("plugins"), {
   change_detection = {
     enabled = false,
   },
+  rocks = {
+    enabled = false,
+  },
   ui = {
     border = "rounded",
   },
