@@ -33,6 +33,7 @@ return {
           "marksman",
           "prettier",
           "pyright",
+          "rstcheck",
           "ruff",
           "shellcheck",
           "shfmt",

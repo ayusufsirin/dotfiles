@@ -8,6 +8,14 @@ return {
       "theHamsta/nvim-dap-virtual-text",
       "mfussenegger/nvim-dap-python",
     },
+    keys = {
+      { "<leader>db", mode = "n", desc = "Toggle breakpoint" },
+      { "<leader>dc", mode = "n", desc = "Continue debugger" },
+      { "<leader>do", mode = "n", desc = "Step over" },
+      { "<leader>di", mode = "n", desc = "Step into" },
+      { "<leader>dO", mode = "n", desc = "Step out" },
+      { "<leader>du", mode = "n", desc = "Toggle DAP UI" },
+    },
     config = function()
       local dap = require("dap")
       local dapui = require("dapui")
