@@ -3,6 +3,12 @@ local opt = vim.opt
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_ruby_provider = 0
 
+local mason_bin = vim.fn.stdpath("data") .. "/mason/bin"
+local path_sep = vim.fn.has("win32") == 1 and ";" or ":"
+if not vim.env.PATH:find(mason_bin, 1, true) then
+  vim.env.PATH = mason_bin .. path_sep .. vim.env.PATH
+end
+
 opt.termguicolors = true
 opt.mouse = "a"
 opt.mousemodel = "extend"
