@@ -53,6 +53,28 @@ return {
     event = "VeryLazy",
     dependencies = { "nvim-telescope/telescope.nvim" },
     config = function()
+      local project = require("project_nvim.project")
+
+      project.find_lsp_root = function()
+        local buf_ft = vim.bo.filetype
+        local clients = vim.lsp.get_clients({ bufnr = 0 })
+        if vim.tbl_isempty(clients) then
+          return nil
+        end
+
+        local ignore_lsp = require("project_nvim.config").options.ignore_lsp
+        for _, client in ipairs(clients) do
+          local filetypes = client.config.filetypes
+          if filetypes and vim.tbl_contains(filetypes, buf_ft) then
+            if not vim.tbl_contains(ignore_lsp, client.name) then
+              return client.config.root_dir, client.name
+            end
+          end
+        end
+
+        return nil
+      end
+
       require("project_nvim").setup({
         manual_mode = false,
         detection_methods = { "lsp", "pattern" },
