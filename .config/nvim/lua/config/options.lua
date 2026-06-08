@@ -45,6 +45,14 @@ opt.shiftwidth = 2
 opt.shiftround = true
 opt.smartindent = true
 opt.confirm = true
+opt.sessionoptions = {
+  "curdir",
+  "folds",
+  "help",
+  "tabpages",
+  "winsize",
+  "terminal",
+}
 
 local state = vim.fn.stdpath("state")
 local undo = state .. "/undo"

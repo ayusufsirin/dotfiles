@@ -4,6 +4,89 @@ require("config.terminal").setup_click_handlers()
 require("config.splitview").setup_click_handlers()
 require("config.diagnostics").setup_click_handlers()
 
+local function refresh_restored_buffers()
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == "" then
+      local name = vim.api.nvim_buf_get_name(bufnr)
+      if name:match("NvimTree_%d+$") and vim.bo[bufnr].filetype ~= "NvimTree" then
+        pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+      end
+    end
+  end
+
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == "" then
+      local name = vim.api.nvim_buf_get_name(bufnr)
+      if name ~= "" then
+        if vim.bo[bufnr].filetype == "" then
+          vim.api.nvim_buf_call(bufnr, function()
+            vim.cmd("filetype detect")
+          end)
+        end
+
+        vim.api.nvim_exec_autocmds("BufReadPost", {
+          buffer = bufnr,
+          modeline = false,
+        })
+
+        if vim.bo[bufnr].filetype ~= "" then
+          vim.api.nvim_exec_autocmds("FileType", {
+            buffer = bufnr,
+            modeline = false,
+          })
+        end
+
+        pcall(vim.treesitter.start, bufnr)
+      end
+    end
+  end
+
+  for _, winid in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_is_valid(winid) then
+      local bufnr = vim.api.nvim_win_get_buf(winid)
+      if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == "" and vim.bo[bufnr].filetype ~= "NvimTree" then
+        vim.api.nvim_win_call(winid, function()
+          vim.api.nvim_exec_autocmds("BufEnter", {
+            buffer = bufnr,
+            modeline = false,
+          })
+          vim.api.nvim_exec_autocmds("WinEnter", {
+            buffer = bufnr,
+            modeline = false,
+          })
+          if vim.bo[bufnr].syntax == "" and vim.bo[bufnr].filetype ~= "" then
+            vim.bo[bufnr].syntax = vim.bo[bufnr].filetype
+          end
+        end)
+      end
+    end
+  end
+end
+
+local function close_tree_for_session_save()
+  local ok_api, api = pcall(require, "nvim-tree.api")
+  if not ok_api or not api.tree.is_visible() then
+    return
+  end
+
+  local tree_winid = vim.fn.bufwinid("NvimTree_1")
+  local current_win = vim.api.nvim_get_current_win()
+
+  if tree_winid ~= -1 and current_win == tree_winid then
+    for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      if winid ~= tree_winid then
+        local bufnr = vim.api.nvim_win_get_buf(winid)
+        if vim.bo[bufnr].buftype == "" and vim.bo[bufnr].filetype ~= "NvimTree" then
+          vim.api.nvim_set_current_win(winid)
+          break
+        end
+      end
+    end
+  end
+
+  api.tree.close()
+end
+
 vim.api.nvim_create_autocmd("TextYankPost", {
   group = group,
   desc = "Highlight yanked text",
@@ -183,6 +266,26 @@ vim.api.nvim_create_autocmd("VimEnter", {
         })
       end
     end
+  end,
+})
+
+vim.api.nvim_create_autocmd("User", {
+  group = group,
+  pattern = "PersistenceLoadPost",
+  desc = "Refresh buffers after session restore",
+  callback = function()
+    vim.schedule(function()
+      refresh_restored_buffers()
+    end)
+  end,
+})
+
+vim.api.nvim_create_autocmd("User", {
+  group = group,
+  pattern = "PersistenceSavePre",
+  desc = "Close tree before session save",
+  callback = function()
+    close_tree_for_session_save()
   end,
 })
 
