@@ -4,54 +4,152 @@ Portable Neovim configuration for terminal development under `.dotfiles/.config/
 
 ## Layout
 
-The config is stored directly in the dotfiles repo and can be symlinked into `~/.config/nvim`:
+The config lives directly in the dotfiles repo:
 
 ```text
 ~/.dotfiles/.config/nvim
 ```
 
-## Requirements
+## What this setup expects
 
-This configuration targets a modern Neovim build, ideally `0.10+`.
-It is configured for mouse-driven editing in the terminal and uses a tree-style file sidebar instead of a floating explorer.
-It also adds project switching, session restore, and diagnostics/quickfix sidebars for IDE-like navigation.
+This configuration targets modern Neovim, preferably `0.10+`.
+It is built around:
 
-Recommended external tools:
+- `lazy.nvim` for plugin management
+- `mason.nvim` and `mason-tool-installer.nvim` for editor-side language tools
+- terminal-first workflows with mouse support, split navigation, a persistent tree, sessions, diagnostics sidebars, and git gutter actions
 
+## Machine prerequisites
+
+These must exist on the machine before the config can bootstrap cleanly:
+
+- `nvim`
 - `git`
+- `curl`
+- `tar`
+- `gzip`
+- `unzip`
 - `ripgrep`
 - `fd` or `fdfind`
 - `python3`
+- `python3-venv`
 - `node`
+- `npm`
+
+Useful extras:
+
+- `xclip` or `wl-clipboard` on Linux for `clipboard=unnamedplus`
+- `make` and a C toolchain if you later add plugins with native builds
+
+### Debian / Ubuntu
+
+```bash
+sudo apt update
+sudo apt install -y neovim git curl tar gzip unzip ripgrep fd-find python3 python3-venv nodejs npm xclip
+```
+
+### Fedora
+
+```bash
+sudo dnf install -y neovim git curl tar gzip unzip ripgrep fd-find python3 python3-pip python3-virtualenv nodejs npm xclip
+```
+
+### Arch
+
+```bash
+sudo pacman -S --needed neovim git curl tar gzip unzip ripgrep fd python python-virtualenv nodejs npm xclip
+```
+
+### macOS
+
+```bash
+brew install neovim git curl ripgrep fd python node
+```
+
+## What Mason installs for you
+
+On first launch, Mason is configured to install these tools automatically:
+
 - `clangd`
 - `clang-format`
+- `codelldb`
+- `debugpy`
+- `lua-language-server`
+- `markdownlint-cli2`
+- `marksman`
+- `prettier`
+- `pyright`
+- `rstcheck`
+- `ruff`
 - `shellcheck`
 - `shfmt`
-- `tree` is not required; the sidebar is provided by Neovim plugins.
-- `trouble` is provided by Neovim plugins for diagnostics, quickfix, and location lists.
-- `statuscol` is provided by Neovim plugins for clickable gutter actions.
+- `stylua`
+- `yaml-language-server`
 
-The first launch bootstraps `lazy.nvim` and Mason-managed language tools.
+That means you do not need to install those manually in the normal case.
+The main requirement is that Python virtual environments and npm-backed installs work on the machine.
 
 ## Install
+
+Clone the dotfiles repo wherever you keep it, then link this config:
 
 ```bash
 mkdir -p ~/.config
 ln -sfn ~/.dotfiles/.config/nvim ~/.config/nvim
 ```
 
-Open Neovim once and let it install plugins and tools:
+Open Neovim once:
 
 ```bash
 nvim
 ```
 
-If you want to refresh plugin and tool installs later, run inside Neovim:
+On the first run, let it finish:
+
+- plugin bootstrap via `lazy.nvim`
+- Mason registry setup
+- automatic Mason tool installation
+
+## First-run verification
+
+Inside Neovim, these commands are the quickest sanity check:
+
+```vim
+:Lazy
+:Mason
+:checkhealth
+```
+
+For a full refresh later:
 
 ```vim
 :Lazy sync
-:Mason
+:MasonToolsInstall
+:checkhealth
 ```
+
+## Troubleshooting
+
+If a tool is declared but missing, first try:
+
+```vim
+:Lazy sync
+:MasonUpdate
+:MasonToolsInstall
+```
+
+If a specific Mason install fails, inspect:
+
+```vim
+:MasonLog
+```
+
+Common causes:
+
+- missing `python3-venv`
+- missing `npm`
+- interrupted first boot
+- old system `nvim`
 
 ## Notes
 
