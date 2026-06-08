@@ -63,7 +63,18 @@ return {
     "stevearc/dressing.nvim",
     event = "VeryLazy",
     config = function()
-      require("dressing").setup({})
+      require("dressing").setup({
+        select = {
+          backend = { "builtin" },
+          builtin = {
+            mappings = {
+              ["<Esc>"] = "Close",
+              ["<C-c>"] = "Close",
+              ["<CR>"] = "Confirm",
+            },
+          },
+        },
+      })
     end,
   },
 }
