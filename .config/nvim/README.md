@@ -37,7 +37,7 @@ The first launch bootstraps `lazy.nvim` and Mason-managed language tools.
 
 ```bash
 mkdir -p ~/.config
-ln -sfn /home/joseph/.dotfiles/.config/nvim ~/.config/nvim
+ln -sfn ~/.dotfiles/.config/nvim ~/.config/nvim
 ```
 
 Open Neovim once and let it install plugins and tools:
@@ -67,4 +67,4 @@ If you want to refresh plugin and tool installs later, run inside Neovim:
 - Window movement and split creation use `<C-h/j/k/l>`, `<leader>sv`, `<leader>sh`, `<leader>se`, and `<leader>sc`.
 - On startup with no file arguments, Neovim restores the current project session when one exists and opens the tree sidebar focused on the workspace.
 - If you launch Neovim with explicit file arguments, it skips automatic session restore and starts with those files only.
-- `Gitsigns` now highlights changed lines and changed line numbers, and clicking the line-number gutter opens a popup menu for hunk preview, blame, or inline blame toggling. The keyboard fallback is `<leader>gm`.
+- `Gitsigns` now highlights changed lines and changed line numbers. In the line-number gutter, single left-click opens a compact action menu, double left-click previews the hunk, right-click blames the line, and middle-click or Ctrl-left-click toggles inline blame. The keyboard fallback is `<leader>gm`.
