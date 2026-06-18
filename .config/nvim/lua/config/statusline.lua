@@ -39,4 +39,24 @@ function M.filename()
   }
 end
 
+function M.debug_component()
+  return {
+    function()
+      local ok, debug_ui = pcall(require, "config.debug_ui")
+      if not ok then
+        return ""
+      end
+
+      return debug_ui.session_label()
+    end,
+    color = { fg = "#b8bb26" },
+    on_click = function()
+      local ok, dapui = pcall(require, "dapui")
+      if ok then
+        dapui.toggle()
+      end
+    end,
+  }
+end
+
 return M

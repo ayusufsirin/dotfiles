@@ -43,6 +43,15 @@ return {
           },
           {
             sign = {
+              name = { "Dap.*" },
+              maxwidth = 1,
+              colwidth = 1,
+              auto = false,
+            },
+            click = "v:lua.ScDapBreakpoint",
+          },
+          {
+            sign = {
               name = { "DiagnosticSign.*", "GitSigns.*" },
               maxwidth = 2,
               colwidth = 1,

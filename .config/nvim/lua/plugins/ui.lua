@@ -40,6 +40,7 @@ return {
             statusline.diagnostic_component("warn"),
             statusline.diagnostic_component("info"),
             statusline.diagnostic_component("hint"),
+            statusline.debug_component(),
             "filetype",
           },
           lualine_y = { "progress" },

@@ -65,7 +65,14 @@ function M.pick_vertical()
 end
 
 function M.set_file_winbar()
+  local debug_prefix = ""
+  local ok_debug, debug_ui = pcall(require, "config.debug_ui")
+  if ok_debug then
+    debug_prefix = debug_ui.file_winbar_prefix()
+  end
+
   vim.wo.winbar = table.concat({
+    debug_prefix,
     "%#TabLine#",
     "%@v:lua.FilePrevBuffer@",
     " 󰒮 Prev ",

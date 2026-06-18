@@ -10,5 +10,6 @@ return {
   require("plugins.formatting"),
   require("plugins.git"),
   require("plugins.gitview"),
+  require("plugins.tasks"),
   require("plugins.dap"),
 }

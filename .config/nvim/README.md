@@ -151,6 +151,52 @@ Common causes:
 - interrupted first boot
 - old system `nvim`
 
+## ROS2 debugging
+
+The config includes DAP support for Python and C++ ROS2 packages without requiring a
+Neovim distribution. Build and run actions use `overseer.nvim` for task UI,
+history, output, and task actions. ROS2 helpers detect a `colcon` workspace from
+the current file or working directory, source the workspace setup file, and launch
+installed nodes with the sourced ROS2 environment. If Neovim was started from an
+unsourced shell, it will also source a single detected `/opt/ros/<distro>/setup.bash`
+underlay before the workspace overlay.
+
+Build workspaces with debug-friendly output before debugging. The Build button uses
+the same flags and adds `--packages-up-to <current-package>` when the current file
+is inside a ROS2 package:
+
+```bash
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+```
+
+Use these mappings from a ROS2 workspace:
+
+- `<leader>drb` builds the current package and dependencies with `--packages-up-to`.
+- `<leader>drr` picks and runs an installed ROS2 node in a terminal.
+- `<leader>drp` picks and debugs an installed Python node.
+- `<leader>drc` picks and debugs an installed C++ node with `codelldb`.
+- `<leader>dra` attaches `codelldb` to an already-running ROS2 process.
+- `<leader>dre` opens a scratch buffer with detected workspace and environment details.
+- `<leader>du` toggles variables, watches, stack frames, breakpoints, REPL, and console views.
+- `<leader>oo` toggles the Overseer task list.
+- `<leader>or` opens Overseer's task picker.
+- `<leader>oa` opens task actions for a selected task.
+
+The file winbar also exposes clickable IDE-style controls. When no debug session is
+active it shows Build, Run, Debug Python, Debug C++, attach, and UI buttons. During
+a session it switches to continue, step, REPL, restart, stop, and UI buttons.
+
+The left DAP sign column is clickable:
+
+- left-click toggles a breakpoint on that line
+- right-click creates a conditional breakpoint
+- middle-click creates a log point
+
+Prefer direct installed executable debugging for individual nodes. For nodes
+started through `ros2 launch`, start the launch normally and use attach mode for
+the target C++ process. Generic attach is not available for Python processes
+unless they were started with a debugpy listener.
+
 ## Notes
 
 - Python uses `pyright`, formatting and linting via `ruff`, and debug support via `debugpy`.

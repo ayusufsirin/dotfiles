@@ -15,14 +15,24 @@ return {
       { "<leader>di", mode = "n", desc = "Step into" },
       { "<leader>dO", mode = "n", desc = "Step out" },
       { "<leader>du", mode = "n", desc = "Toggle DAP UI" },
+      { "<leader>drb", mode = "n", desc = "Build ROS2 package" },
+      { "<leader>drr", mode = "n", desc = "Run ROS2 node" },
+      { "<leader>drp", mode = "n", desc = "Debug ROS2 Python node" },
+      { "<leader>drc", mode = "n", desc = "Debug ROS2 C++ node" },
+      { "<leader>dra", mode = "n", desc = "Attach ROS2 C++ process" },
+      { "<leader>dre", mode = "n", desc = "Inspect ROS2 debug environment" },
     },
     config = function()
       local dap = require("dap")
       local dapui = require("dapui")
+      local debug_ui = require("config.debug_ui")
+      local ros2_debug = require("config.ros2_debug")
 
       require("nvim-dap-virtual-text").setup({
         commented = true,
       })
+
+      debug_ui.setup(dap)
 
       dapui.setup({
         floating = {
@@ -46,6 +56,18 @@ return {
       vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "Step into" })
       vim.keymap.set("n", "<leader>dO", dap.step_out, { desc = "Step out" })
       vim.keymap.set("n", "<leader>du", dapui.toggle, { desc = "Toggle DAP UI" })
+      vim.keymap.set("n", "<leader>drb", function()
+        require("lazy").load({ plugins = { "overseer.nvim" } })
+        ros2_debug.build_current_package()
+      end, { desc = "Build ROS2 package" })
+      vim.keymap.set("n", "<leader>drr", function()
+        require("lazy").load({ plugins = { "overseer.nvim" } })
+        ros2_debug.run_node()
+      end, { desc = "Run ROS2 node" })
+      vim.keymap.set("n", "<leader>drp", ros2_debug.launch_python_node, { desc = "Debug ROS2 Python node" })
+      vim.keymap.set("n", "<leader>drc", ros2_debug.launch_cpp_node, { desc = "Debug ROS2 C++ node" })
+      vim.keymap.set("n", "<leader>dra", ros2_debug.attach_process, { desc = "Attach ROS2 C++ process" })
+      vim.keymap.set("n", "<leader>dre", ros2_debug.inspect_environment, { desc = "Inspect ROS2 debug environment" })
 
       local debugpy = vim.fn.stdpath("data") .. "/mason/packages/debugpy/venv/bin/python"
       if vim.fn.executable(debugpy) == 1 then
@@ -96,8 +118,13 @@ return {
         },
       }
 
-      dap.configurations.c = cpp_config
-      dap.configurations.cpp = cpp_config
+      dap.configurations.c = vim.deepcopy(cpp_config)
+      dap.configurations.cpp = vim.deepcopy(cpp_config)
+
+      dap.configurations.python = dap.configurations.python or {}
+      vim.list_extend(dap.configurations.python, ros2_debug.python_configurations())
+      vim.list_extend(dap.configurations.c, ros2_debug.cpp_configurations())
+      vim.list_extend(dap.configurations.cpp, ros2_debug.cpp_configurations())
     end,
   },
 }

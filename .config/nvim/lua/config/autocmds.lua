@@ -3,6 +3,7 @@ local group = vim.api.nvim_create_augroup("JosephNeovim", { clear = true })
 require("config.terminal").setup_click_handlers()
 require("config.splitview").setup_click_handlers()
 require("config.diagnostics").setup_click_handlers()
+require("config.debug_ui").setup_click_handlers()
 
 local function refresh_restored_buffers()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
