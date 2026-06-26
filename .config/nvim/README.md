@@ -197,6 +197,58 @@ started through `ros2 launch`, start the launch normally and use attach mode for
 the target C++ process. Generic attach is not available for Python processes
 unless they were started with a debugpy listener.
 
+## C/C++ STM32 cross-compilation with clangd
+
+The global `clangd` setup (installed by Mason, configured in `lua/plugins/lsp.lua`) works for standard system-compiler projects out of the box. For STM32 bare-metal firmware that targets `arm-none-eabi`, two per-project files are required. No changes to the global Neovim config are needed.
+
+### 1. Generate `compile_commands.json`
+
+Don't write this by hand. Generate it from your build system. STM32CubeMX and STM32CubeIDE remain responsible for `.ioc` generation and for producing the underlying Makefile or CMake project structure.
+
+**Makefile-based project (most CubeMX/CubeIDE exports):**
+
+```bash
+# Bear wraps your build and captures every compiler invocation
+bear -- make -j$(nproc)
+
+# compiledb is an alternative if Bear is not available
+compiledb make
+```
+
+**CMake-based project:**
+
+Add to `CMakeLists.txt` or pass on the command line:
+
+```cmake
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+```
+
+Place or symlink the resulting `compile_commands.json` in your project root so clangd finds it automatically.
+
+### 2. Create a project-local `.clangd` file
+
+In the root of your STM32 project, create `.clangd`:
+
+```yaml
+CompileFlags:
+  # Tell clangd which compiler driver to use when querying system headers.
+  # Replace /path/to/toolchain with the actual location of your ARM toolchain
+  # (e.g. STM32CubeCLT or a standalone GNU Arm Embedded Toolchain install).
+  QueryDriver:
+    - "/path/to/toolchain/bin/arm-none-eabi-*"
+
+# If compile_commands.json lives in a subdirectory (e.g. build/), uncomment:
+# CompilationDatabase: "build"
+```
+
+This file stays with the project, not with the dotfiles, so the path to the toolchain is set once per machine/project combination without polluting the global Neovim config.
+
+### Why this approach
+
+- `--query-driver` as a global clangd flag would affect every C/C++ project and is too broad for a shared dotfile.
+- Project-local `.clangd` scopes the cross-compiler path to exactly the projects that need it.
+- The global `lsp.lua` flags (`--background-index`, `--clang-tidy`, `--completion-style=detailed`, `--header-insertion=never`) continue to apply without modification.
+
 ## Notes
 
 - Python uses `pyright`, formatting and linting via `ruff`, and debug support via `debugpy`.
