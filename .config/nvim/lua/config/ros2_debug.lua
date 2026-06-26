@@ -1,58 +1,19 @@
 local M = {}
 
+local utils = require("config.dev_utils")
 local env_cache = {}
 
 local function notify(message, level)
-  vim.notify(message, level or vim.log.levels.WARN, { title = "ROS2 debug" })
+  utils.notify(message, level, { title = "ROS2 debug" })
 end
 
-local function join(...)
-  if vim.fs and vim.fs.joinpath then
-    return vim.fs.joinpath(...)
-  end
-
-  return table.concat(vim.tbl_filter(function(part)
-    return part ~= nil and part ~= ""
-  end, { ... }), "/"):gsub("//+", "/")
-end
-
-local function dirname(path)
-  if vim.fs and vim.fs.dirname then
-    return vim.fs.dirname(path)
-  end
-
-  return vim.fn.fnamemodify(path, ":h")
-end
-
-local function normalize(path)
-  if vim.fs and vim.fs.normalize then
-    return vim.fs.normalize(path)
-  end
-
-  return vim.fn.fnamemodify(path, ":p")
-end
-
-local function is_file(path)
-  return path and vim.fn.filereadable(path) == 1
-end
-
-local function is_dir(path)
-  return path and vim.fn.isdirectory(path) == 1
-end
-
-local function start_path(path)
-  path = path or vim.api.nvim_buf_get_name(0)
-  if path == "" then
-    path = vim.fn.getcwd()
-  end
-
-  path = normalize(path)
-  if is_file(path) then
-    path = dirname(path)
-  end
-
-  return path
-end
+local join = utils.join
+local dirname = utils.dirname
+local normalize = utils.normalize
+local is_file = utils.is_file
+local is_dir = utils.is_dir
+local start_path = utils.start_path
+local shell_join = utils.shell_join
 
 local function workspace_marker(dir)
   local setup = join(dir, "install", "setup.bash")
@@ -115,10 +76,6 @@ local function prompt_args(prompt)
   return vim.fn.split(input)
 end
 
-local function shell_join(args)
-  return table.concat(vim.tbl_map(vim.fn.shellescape, args or {}), " ")
-end
-
 local function package_name(package_xml)
   local ok, lines = pcall(vim.fn.readfile, package_xml)
   if not ok then
@@ -155,20 +112,7 @@ local function env_cache_key(workspace)
 end
 
 function M.current_workspace(path)
-  local dir = start_path(path)
-
-  while dir and dir ~= "" do
-    local marker = workspace_marker(dir)
-    if marker then
-      return marker
-    end
-
-    local parent = dirname(dir)
-    if parent == dir then
-      break
-    end
-    dir = parent
-  end
+  return utils.find_upward(path, workspace_marker)
 end
 
 function M.require_workspace(path)
