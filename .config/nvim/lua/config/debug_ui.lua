@@ -61,6 +61,8 @@ local function load_dap()
   return dap
 end
 
+M.load_dap = load_dap
+
 local function load_dapui()
   load_dap()
 
@@ -176,12 +178,11 @@ function M.file_winbar_prefix()
       " | ",
     })
   else
+    for _, action in ipairs(require("config.project_actions").inactive_buttons()) do
+      chunks[#chunks + 1] = button(action.callback, action.label)
+    end
+
     vim.list_extend(chunks, {
-      button("DebugRosBuild", "Build"),
-      button("DebugRosRun", "Run"),
-      button("DebugRosPython", "Debug Py"),
-      button("DebugRosCpp", "Debug C++"),
-      button("DebugRosAttach", "Attach"),
       button("DebugToggleUI", "UI"),
       " | ",
     })
@@ -287,39 +288,7 @@ function M.setup_click_handlers()
     end
   end
 
-  _G.DebugRosBuild = function()
-    local ok, lazy = pcall(require, "lazy")
-    if ok then
-      pcall(lazy.load, { plugins = { "overseer.nvim" } })
-    end
-    require("config.ros2_debug").build_current_package()
-  end
-
-  _G.DebugRosRun = function()
-    local ok, lazy = pcall(require, "lazy")
-    if ok then
-      pcall(lazy.load, { plugins = { "overseer.nvim" } })
-    end
-    require("config.ros2_debug").run_node()
-  end
-
-  _G.DebugRosPython = function()
-    if load_dap() then
-      require("config.ros2_debug").launch_python_node()
-    end
-  end
-
-  _G.DebugRosCpp = function()
-    if load_dap() then
-      require("config.ros2_debug").launch_cpp_node()
-    end
-  end
-
-  _G.DebugRosAttach = function()
-    if load_dap() then
-      require("config.ros2_debug").attach_process()
-    end
-  end
+  require("config.project_actions").setup_click_handlers()
 end
 
 function M.setup(dap)
