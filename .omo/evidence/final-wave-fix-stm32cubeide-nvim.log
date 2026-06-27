@@ -215,9 +215,17 @@ Before cleanup commit (after `git rm` but before commit):
   .config/nvim/.omo/evidence/task-14-stm32cubeide-nvim.log
   .config/nvim/.omo/notepads/stm32cubeide-nvim/learnings.md
 
-After cleanup commit:
+After cleanup commit (5530966):
   $ GIT_MASTER=1 git diff --name-only 5c4b6fe..HEAD -- .config/nvim/.omo
-  <empty>
+  <no output>
+
+Re-run of headless check after commit:
+  build_task_cmd: make -j"$(nproc 2>/dev/null || echo 4)" all -C '/tmp/nvim-stm32-final-wave-fixture/Debug'
+  clean_task_cmd: make clean -C '/tmp/nvim-stm32-final-wave-fixture/Debug'
+  compile_db_task_cmd: compiledb make -C '/tmp/nvim-stm32-final-wave-fixture/Debug'
+  bear_fallback_task_cmd: bear -- make -j"$(nproc 2>/dev/null || echo 4)" all -C '/tmp/nvim-stm32-final-wave-fixture/Debug'
+  openocd_task_cmd: openocd -f 'interface/jlink.cfg' -f 'target/stm32h7x.cfg'
+  FINAL_WAVE_CHECK: OK
 
 ================================================================================
 Conclusion
