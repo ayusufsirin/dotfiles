@@ -24,3 +24,14 @@
 - Flash auto-selects the sole ELF candidate; when multiple exist it prompts with `vim.fn.inputlist`, and when none exist it prompts for a path. Erase requires typing "erase" before generating the `STM32_Programmer_CLI -e all` command.
 - OpenOCD server defaults to `interface/stlink.cfg` and prompts for a target cfg (e.g. `target/stm32f4x.cfg`), making it easy to override per MCU/board later.
 - Headless QA mocks `vim.fn.input` for erase/openocd/flash-multiple paths and temporarily prepends a fake `compiledb` to PATH to verify the tool-preference branch without running real tools.
+
+## 2026-06-27T00:51:13+03:00 - Task 9 STM32 command builders and inspection
+- Added `build_current_config`, `clean_current_config`, `generate_compile_commands`, `flash_elf`, `erase_chip`, `start_openocd`, and `inspect_environment` to `config.stm32_debug`.
+- Command builders return shell command strings only; they do not execute `STM32_Programmer_CLI`, OpenOCD, GDB, or any hardware action, so headless fixture tests are safe.
+- Missing-tool checks use `config.dev_utils.executable` and return actionable messages (e.g., install STM32CubeProgrammer / STM32CubeCLT, OpenOCD, arm-none-eabi-gdb, compiledb/bear).
+- `inspect_environment` (and `inspect_environment_lines`) report project root, configs, ELF candidates, tool availability, OpenOCD interface/target choice, and suggested next steps.
+- `erase_chip` requires `confirmed=true` to build the command; this prevents accidental automatic erase.
+- `generate_compile_commands` prefers `compiledb`, falls back to `bear`, and reports a clear error if neither is available.
+- `start_openocd` defaults to `interface/stlink.cfg` and requires an explicit target cfg override; it now also checks `openocd` availability.
+- Build command uses a portable `$(nproc 2>/dev/null || echo 4)` jobs expression so it degrades safely on systems without `nproc`.
+- Fake-fixture QA passes with all STM32 tools mocked and with all STM32 tools missing; no hardware or real toolchain execution occurred.
