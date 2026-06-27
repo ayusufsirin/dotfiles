@@ -55,3 +55,9 @@ Refine the Neovim startup behavior in /home/joseph/.dotfiles/.config/nvim so it 
 ```text
 Extend /home/joseph/.dotfiles/.config/nvim with a stronger Git gutter experience. Keep using gitsigns.nvim, but improve changed-line visibility in the number/sign columns and add a popup-style line inspection menu triggered from the gutter if practical. Prefer maintained community plugins such as statuscol.nvim and dressing.nvim before inventing custom UI, and provide a keyboard fallback for the same actions. Verify the config still starts cleanly.
 ```
+
+## 10. STM32 / embedded workflow evolution
+
+```text
+Extend /home/joseph/.dotfiles/.config/nvim for STM32 and embedded firmware workflows while preserving the existing ROS2, Python, Markdown, YAML, RST, and generic C/C++ support. Keep the current project-detection philosophy: Neovim is the editor layer, and chip/project generation stays in STM32CubeMX / STM32CubeIDE. Add or refine build, flash, debug, or inspection features only through explicit user-invoked keymaps, Overseer tasks, or DAP launches — never auto-flash, auto-erase, auto-connect, or mutate `.ioc`, `.project`, `.cproject`, `.mxproject`, generated Makefiles, or linker scripts. Support project-local overrides (e.g. `.nvim/stm32.lua` or `.stm32-nvim.lua`) for board/probe-specific settings, keep machine-specific absolute paths out of the dotfiles, and document any new mappings, task names, or `.clangd`/compile_commands guidance in README.md and PROMPTS.md. Verify with headless Neovim and no-hardware fixtures where possible.
+```

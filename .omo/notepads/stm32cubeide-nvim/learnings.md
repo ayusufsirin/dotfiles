@@ -56,3 +56,9 @@
 - Provider priority makes overlap deterministic: STM32 priority 10, ROS2 priority 100, so STM32 wins when a directory contains both STM32 and ROS2 markers. This is intentional because an embedded firmware project is more specific than a generic ROS2 workspace.
 - Headless winbar QA must open a buffer inside the fixture; `current_project()` uses the current buffer path via `config.dev_utils.start_path`, not the global cwd, so an empty headless buffer would otherwise fail detection.
 - ROS2 `<leader>dr*` mappings, generic `<leader>d[bcioOu]` mappings, and winbar labels remain intact; the new `<leader>ds*` prefix avoids all existing DAP/ROS2 collisions.
+
+## 2026-06-27T09:00:00+03:00 - Task 12 documentation
+- README.md now contains one consolidated STM32CubeIDE workflow section that covers prerequisites, task names (`STM32: build`, `STM32: clean`, `STM32: generate compile_commands.json`, `STM32: flash`, `STM32: erase`, `STM32: openocd server`), keymaps (`<leader>dsb/dsc/dsg/dsf/dse/dso/dsd/dsi`), project-local overrides (`.nvim/stm32.lua`, `.stm32-nvim.lua`), `.clangd`/compile_commands guidance, no-hardware verification, and opt-in hardware QA.
+- Documentation explicitly states that CubeMX/CubeIDE owns `.ioc`/Makefile generation and that the Neovim workflow does not auto-flash, auto-erase, auto-connect, or mutate CubeIDE metadata.
+- PROMPTS.md adds a future-maintenance prompt (#10) for STM32/embedded workflow evolution with the same guardrails.
+- Verification grep targets: `STM32`, `CubeIDE`, `STM32_Programmer_CLI`, `OpenOCD`, `compile_commands` in README.md; `STM32`/`embedded` in PROMPTS.md; no `auto-flash` or `automatically flash` misleading claims in README.md.

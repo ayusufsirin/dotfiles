@@ -197,13 +197,80 @@ started through `ros2 launch`, start the launch normally and use attach mode for
 the target C++ process. Generic attach is not available for Python processes
 unless they were started with a debugpy listener.
 
-## C/C++ STM32 cross-compilation with clangd
+## STM32CubeIDE workflow
 
-The global `clangd` setup (installed by Mason, configured in `lua/plugins/lsp.lua`) works for standard system-compiler projects out of the box. For STM32 bare-metal firmware that targets `arm-none-eabi`, two per-project files are required. No changes to the global Neovim config are needed.
+This config treats STM32CubeMX / STM32CubeIDE as the project generators and Neovim as the editor/terminal-IDE layer on top of them. The workflow is explicit: it never mutates `.ioc`, `.project`, `.cproject`, `.mxproject`, generated Makefiles, or linker scripts, and it never flashes, erases, or connects to hardware automatically. All hardware actions are started deliberately through a keymap, Overseer task, or `nvim-dap` launch.
 
-### 1. Generate `compile_commands.json`
+Project detection walks upward from the current file or working directory and recognizes any of: `.ioc`, `.project`, `.cproject`, `.mxproject`, `Debug/Makefile`, `Release/Makefile`. When both `Debug` and `Release` Makefiles exist, `Debug` is selected by default.
 
-Don't write this by hand. Generate it from your build system. STM32CubeMX and STM32CubeIDE remain responsible for `.ioc` generation and for producing the underlying Makefile or CMake project structure.
+### Prerequisites
+
+Required on the host:
+
+- `make` — used to drive the CubeIDE-generated Makefile.
+- STM32CubeProgrammer CLI (`STM32_Programmer_CLI`) — used for flash and erase tasks. It is normally installed as part of STM32CubeCLT or standalone STM32CubeProgrammer. Add it to your `PATH`.
+- `arm-none-eabi-gdb` — used by `nvim-dap-cortex-debug` for DAP debugging. It is also part of STM32CubeCLT or a standalone GNU Arm Embedded Toolchain.
+
+Optional but common:
+
+- `openocd` — if you want the OpenOCD debug server path instead of, or alongside, ST-LINK_gdbserver.
+- `compiledb` or `bear` — to generate `compile_commands.json` for `clangd`.
+- udev rules for ST-LINK / CMSIS-DAP probes on Linux, so your user can access debug adapters without `sudo`.
+
+If these tools are missing, Neovim still starts cleanly and the STM32 tasks simply show actionable messages explaining what to install.
+
+### Available tasks
+
+Inside an STM32CubeIDE project, open the Overseer task picker with `<leader>or` or run `:OverseerRun`. The following tasks appear:
+
+- `STM32: build` — `make -C <default-config>` (default config is `Debug` when present).
+- `STM32: clean` — `make clean -C <default-config>`.
+- `STM32: generate compile_commands.json` — prefers `compiledb`, falls back to `bear`; produces an actionable message if neither is installed.
+- `STM32: flash` — prompts for or auto-selects an ELF, then builds the `STM32_Programmer_CLI` command. It does **not** run until you start the task.
+- `STM32: erase` — requires typing `erase` to confirm before building the chip-erase command.
+- `STM32: openocd server` — starts `openocd -f interface/stlink.cfg -f <target-cfg>`; prompts for the target config when none is set.
+
+### Keymaps
+
+Use these from an STM32 project buffer:
+
+- `<leader>dsb` — build the selected config.
+- `<leader>dsc` — clean the selected config.
+- `<leader>dsg` — generate `compile_commands.json`.
+- `<leader>dsf` — flash the selected ELF (prompts when ambiguous).
+- `<leader>dse` — erase chip (requires confirmation).
+- `<leader>dso` — start OpenOCD server.
+- `<leader>dsd` — launch DAP debug through `nvim-dap-cortex-debug`.
+- `<leader>dsi` — open a scratch buffer with project detection, tool availability, and suggested next steps.
+
+Generic DAP controls remain unchanged: `<leader>db` toggle breakpoint, `<leader>dc` continue, `<leader>do` step over, `<leader>di` step into, `<leader>dO` step out, `<leader>du` toggle DAP UI.
+
+### Winbar actions
+
+When no debug session is active, the file winbar shows project-appropriate buttons. In an STM32 project you get Build, Flash, Debug, OpenOCD, Inspect, and UI toggles. STM32 detection has higher priority than ROS2 detection, so a directory that contains both STM32 and ROS2 markers shows STM32 buttons.
+
+### Project-local overrides
+
+Some settings vary by board or probe and should live with the project, not in the dotfiles. Create one of:
+
+- `.nvim/stm32.lua`
+- `.stm32-nvim.lua`
+
+The file must return a Lua table, for example:
+
+```lua
+return {
+  openocd_interface = "interface/stlink.cfg",
+  openocd_target = "target/stm32f4x.cfg",
+  svd_file = "STM32F407.svd",
+}
+```
+
+Supported keys are `openocd_interface`, `openocd_target`, and `svd_file`. These override defaults and prompt values for the OpenOCD server and DAP debug configurations. Do not hardcode probe serial numbers, versioned install paths, or machine-specific absolute paths in files that are committed to shared repositories.
+
+### `compile_commands.json` and `.clangd`
+
+`clangd` works out of the box for host C/C++. For STM32 cross-compilation it needs a compilation database and a project-local `.clangd` file that points to the ARM toolchain driver. Do not hand-write `compile_commands.json`; generate it from the build system. STM32CubeMX / STM32CubeIDE remain responsible for `.ioc` generation and for producing the underlying Makefile or CMake project structure.
 
 **Makefile-based project (most CubeMX/CubeIDE exports):**
 
@@ -225,8 +292,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 Place or symlink the resulting `compile_commands.json` in your project root so clangd finds it automatically.
 
-### 2. Create a project-local `.clangd` file
-
 In the root of your STM32 project, create `.clangd`:
 
 ```yaml
@@ -241,13 +306,27 @@ CompileFlags:
 # CompilationDatabase: "build"
 ```
 
-This file stays with the project, not with the dotfiles, so the path to the toolchain is set once per machine/project combination without polluting the global Neovim config.
+This approach keeps machine-specific toolchain paths out of the shared dotfiles and scopes them to the projects that actually need them. The global `lsp.lua` flags (`--background-index`, `--clang-tidy`, `--completion-style=detailed`, `--header-insertion=never`) continue to apply without modification.
 
-### Why this approach
+### No-hardware verification
 
-- `--query-driver` as a global clangd flag would affect every C/C++ project and is too broad for a shared dotfile.
-- Project-local `.clangd` scopes the cross-compiler path to exactly the projects that need it.
-- The global `lsp.lua` flags (`--background-index`, `--clang-tidy`, `--completion-style=detailed`, `--header-insertion=never`) continue to apply without modification.
+Baseline verification requires no board, no ST-LINK, and no STM32 toolchain:
+
+- `nvim --headless '+lua require("config.stm32_debug")' +qa` loads the module cleanly.
+- `nvim --headless '+lua require("lazy").load({ plugins = { "overseer.nvim" } })' '+lua require("overseer.template").load("stm32")' +qa` loads the task templates.
+- `nvim --headless '+lua require("lazy").load({ plugins = { "nvim-dap" } })' +qa` loads DAP cleanly.
+- Open a file inside a fake STM32 fixture (`.ioc`, `.project`, `Debug/Makefile`) and run `<leader>dsi` or `:lua require("config.stm32_debug").inspect_environment()` to see detected project details without running any tools.
+
+### Optional hardware QA
+
+Real flashing, OpenOCD connections, and GDB debugging require a connected board and probe. These checks are opt-in and are not executed automatically. A reasonable manual checklist, when you choose to run it, is:
+
+- Confirm the probe is visible: `STM32_Programmer_CLI -l`
+- Confirm SWD connection: `STM32_Programmer_CLI -c port=SWD`
+- Start OpenOCD and verify target detection: `openocd -f interface/stlink.cfg -f target/<target>.cfg -c "init; targets; shutdown"`
+- Connect GDB: `arm-none-eabi-gdb <elf> -ex "target extended-remote :3333" -ex "monitor reset halt" -ex "info registers" -ex "detach" -ex "quit"`
+
+Keep these commands out of automated scripts unless you explicitly set a gate such as `STM32_QA_HARDWARE=1` and review every command before it runs.
 
 ## Notes
 

@@ -1,0 +1,43 @@
+=== README.md STM32/CubeIDE/STM32_Programmer_CLI/OpenOCD/compile_commands grep ===
+200:## STM32CubeIDE workflow
+202:This config treats STM32CubeMX / STM32CubeIDE as the project generators and Neovim as the editor/terminal-IDE layer on top of them. The workflow is explicit: it never mutates `.ioc`, `.project`, `.cproject`, `.mxproject`, generated Makefiles, or linker scripts, and it never flashes, erases, or connects to hardware automatically. All hardware actions are started deliberately through a keymap, Overseer task, or `nvim-dap` launch.
+210:- `make` — used to drive the CubeIDE-generated Makefile.
+211:- STM32CubeProgrammer CLI (`STM32_Programmer_CLI`) — used for flash and erase tasks. It is normally installed as part of STM32CubeCLT or standalone STM32CubeProgrammer. Add it to your `PATH`.
+212:- `arm-none-eabi-gdb` — used by `nvim-dap-cortex-debug` for DAP debugging. It is also part of STM32CubeCLT or a standalone GNU Arm Embedded Toolchain.
+216:- `openocd` — if you want the OpenOCD debug server path instead of, or alongside, ST-LINK_gdbserver.
+217:- `compiledb` or `bear` — to generate `compile_commands.json` for `clangd`.
+220:If these tools are missing, Neovim still starts cleanly and the STM32 tasks simply show actionable messages explaining what to install.
+224:Inside an STM32CubeIDE project, open the Overseer task picker with `<leader>or` or run `:OverseerRun`. The following tasks appear:
+226:- `STM32: build` — `make -C <default-config>` (default config is `Debug` when present).
+227:- `STM32: clean` — `make clean -C <default-config>`.
+228:- `STM32: generate compile_commands.json` — prefers `compiledb`, falls back to `bear`; produces an actionable message if neither is installed.
+229:- `STM32: flash` — prompts for or auto-selects an ELF, then builds the `STM32_Programmer_CLI` command. It does **not** run until you start the task.
+230:- `STM32: erase` — requires typing `erase` to confirm before building the chip-erase command.
+231:- `STM32: openocd server` — starts `openocd -f interface/stlink.cfg -f <target-cfg>`; prompts for the target config when none is set.
+235:Use these from an STM32 project buffer:
+239:- `<leader>dsg` — generate `compile_commands.json`.
+242:- `<leader>dso` — start OpenOCD server.
+250:When no debug session is active, the file winbar shows project-appropriate buttons. In an STM32 project you get Build, Flash, Debug, OpenOCD, Inspect, and UI toggles. STM32 detection has higher priority than ROS2 detection, so a directory that contains both STM32 and ROS2 markers shows STM32 buttons.
+265:  svd_file = "STM32F407.svd",
+269:Supported keys are `openocd_interface`, `openocd_target`, and `svd_file`. These override defaults and prompt values for the OpenOCD server and DAP debug configurations. Do not hardcode probe serial numbers, versioned install paths, or machine-specific absolute paths in files that are committed to shared repositories.
+271:### `compile_commands.json` and `.clangd`
+273:`clangd` works out of the box for host C/C++. For STM32 cross-compilation it needs a compilation database and a project-local `.clangd` file that points to the ARM toolchain driver. Do not hand-write `compile_commands.json`; generate it from the build system. STM32CubeMX / STM32CubeIDE remain responsible for `.ioc` generation and for producing the underlying Makefile or CMake project structure.
+275:**Makefile-based project (most CubeMX/CubeIDE exports):**
+293:Place or symlink the resulting `compile_commands.json` in your project root so clangd finds it automatically.
+295:In the root of your STM32 project, create `.clangd`:
+301:  # (e.g. STM32CubeCLT or a standalone GNU Arm Embedded Toolchain install).
+305:# If compile_commands.json lives in a subdirectory (e.g. build/), uncomment:
+313:Baseline verification requires no board, no ST-LINK, and no STM32 toolchain:
+318:- Open a file inside a fake STM32 fixture (`.ioc`, `.project`, `Debug/Makefile`) and run `<leader>dsi` or `:lua require("config.stm32_debug").inspect_environment()` to see detected project details without running any tools.
+322:Real flashing, OpenOCD connections, and GDB debugging require a connected board and probe. These checks are opt-in and are not executed automatically. A reasonable manual checklist, when you choose to run it, is:
+324:- Confirm the probe is visible: `STM32_Programmer_CLI -l`
+325:- Confirm SWD connection: `STM32_Programmer_CLI -c port=SWD`
+326:- Start OpenOCD and verify target detection: `openocd -f interface/stlink.cfg -f target/<target>.cfg -c "init; targets; shutdown"`
+329:Keep these commands out of automated scripts unless you explicitly set a gate such as `STM32_QA_HARDWARE=1` and review every command before it runs.
+
+=== PROMPTS.md STM32/embedded grep ===
+59:## 10. STM32 / embedded workflow evolution
+62:Extend /home/joseph/.dotfiles/.config/nvim for STM32 and embedded firmware workflows while preserving the existing ROS2, Python, Markdown, YAML, RST, and generic C/C++ support. Keep the current project-detection philosophy: Neovim is the editor layer, and chip/project generation stays in STM32CubeMX / STM32CubeIDE. Add or refine build, flash, debug, or inspection features only through explicit user-invoked keymaps, Overseer tasks, or DAP launches — never auto-flash, auto-erase, auto-connect, or mutate `.ioc`, `.project`, `.cproject`, `.mxproject`, generated Makefiles, or linker scripts. Support project-local overrides (e.g. `.nvim/stm32.lua` or `.stm32-nvim.lua`) for board/probe-specific settings, keep machine-specific absolute paths out of the dotfiles, and document any new mappings, task names, or `.clangd`/compile_commands guidance in README.md and PROMPTS.md. Verify with headless Neovim and no-hardware fixtures where possible.
+
+=== README.md auto-flash/automatically flash guardrail check ===
+No misleading auto-flash/automatically flash claims found.
