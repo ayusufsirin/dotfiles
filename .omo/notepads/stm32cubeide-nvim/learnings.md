@@ -48,3 +48,11 @@
 - `dap.configurations.c` and `.cpp` are extended after codelldb and ROS2 configs, so `Launch file` and ROS2 C++ configs remain intact.
 - A sandboxed local override loader (`loadfile(path, "t", {})`) lets projects keep interface/target/SVD settings under `.nvim/stm32.lua` without executing arbitrary global code.
 - Headless QA for `cortex_configurations` must capture the second return value as the project object, because the function returns `(configs, project)` on success and `(nil, err, project)` on failure.
+
+## 2026-06-27T08:56:00+03:00 - Task 11 STM32 debug keymaps and winbar actions
+- Added `<leader>ds*` keymaps for STM32 workflows: `dsb` build, `dsc` clean, `dsg` generate compile_commands.json, `dsf` flash, `dse` erase, `dso` OpenOCD server, `dsd` debug, `dsi` inspect.
+- STM32 winbar actions are registered through the shared `config.project_actions` registry, reusing `config.stm32_debug` helpers and the existing overseer templates from Task 7; no hardware commands run on winbar display.
+- New global click callbacks follow the `DebugStm32*` naming convention (`DebugStm32Build`, `DebugStm32Clean`, `DebugStm32CompileDb`, `DebugStm32Flash`, `DebugStm32Erase`, `DebugStm32OpenOCD`, `DebugStm32Debug`, `DebugStm32Inspect`) and do not collide with ROS2 `DebugRos*` callbacks or generic DAP mappings.
+- Provider priority makes overlap deterministic: STM32 priority 10, ROS2 priority 100, so STM32 wins when a directory contains both STM32 and ROS2 markers. This is intentional because an embedded firmware project is more specific than a generic ROS2 workspace.
+- Headless winbar QA must open a buffer inside the fixture; `current_project()` uses the current buffer path via `config.dev_utils.start_path`, not the global cwd, so an empty headless buffer would otherwise fail detection.
+- ROS2 `<leader>dr*` mappings, generic `<leader>d[bcioOu]` mappings, and winbar labels remain intact; the new `<leader>ds*` prefix avoids all existing DAP/ROS2 collisions.

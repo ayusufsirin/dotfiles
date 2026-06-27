@@ -215,6 +215,29 @@ function M.require_project(path)
   notify("No STM32CubeIDE project found from the current file or working directory")
 end
 
+function M.run_overseer_template(name)
+  local ok, overseer = pcall(require, "overseer")
+  if not ok then
+    notify("overseer.nvim is required for STM32 tasks", vim.log.levels.ERROR)
+    return false
+  end
+
+  local project = M.current_project()
+  overseer.run_task({
+    name = name,
+    search_params = {
+      dir = project and project.root or vim.fn.getcwd(),
+      filetype = vim.bo.filetype,
+    },
+  }, function(task)
+    if task then
+      overseer.open({ enter = false })
+    end
+  end)
+
+  return true
+end
+
 function M.build_configs(project)
   return project and project.configs or {}
 end

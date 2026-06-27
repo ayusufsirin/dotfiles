@@ -22,6 +22,14 @@ return {
       { "<leader>drc", mode = "n", desc = "Debug ROS2 C++ node" },
       { "<leader>dra", mode = "n", desc = "Attach ROS2 C++ process" },
       { "<leader>dre", mode = "n", desc = "Inspect ROS2 debug environment" },
+      { "<leader>dsb", mode = "n", desc = "Build STM32 project" },
+      { "<leader>dsc", mode = "n", desc = "Clean STM32 project" },
+      { "<leader>dsg", mode = "n", desc = "Generate STM32 compile_commands.json" },
+      { "<leader>dsf", mode = "n", desc = "Flash STM32 target" },
+      { "<leader>dse", mode = "n", desc = "Erase STM32 chip" },
+      { "<leader>dso", mode = "n", desc = "Start STM32 OpenOCD server" },
+      { "<leader>dsd", mode = "n", desc = "Debug STM32 target" },
+      { "<leader>dsi", mode = "n", desc = "Inspect STM32 debug environment" },
     },
     config = function()
       local dap = require("dap")
@@ -80,6 +88,32 @@ return {
       vim.keymap.set("n", "<leader>drc", ros2_debug.launch_cpp_node, { desc = "Debug ROS2 C++ node" })
       vim.keymap.set("n", "<leader>dra", ros2_debug.attach_process, { desc = "Attach ROS2 C++ process" })
       vim.keymap.set("n", "<leader>dre", ros2_debug.inspect_environment, { desc = "Inspect ROS2 debug environment" })
+      vim.keymap.set("n", "<leader>dsb", function()
+        require("lazy").load({ plugins = { "overseer.nvim" } })
+        stm32_debug.run_overseer_template("STM32: build")
+      end, { desc = "Build STM32 project" })
+      vim.keymap.set("n", "<leader>dsc", function()
+        require("lazy").load({ plugins = { "overseer.nvim" } })
+        stm32_debug.run_overseer_template("STM32: clean")
+      end, { desc = "Clean STM32 project" })
+      vim.keymap.set("n", "<leader>dsg", function()
+        require("lazy").load({ plugins = { "overseer.nvim" } })
+        stm32_debug.run_overseer_template("STM32: generate compile_commands.json")
+      end, { desc = "Generate STM32 compile_commands.json" })
+      vim.keymap.set("n", "<leader>dsf", function()
+        require("lazy").load({ plugins = { "overseer.nvim" } })
+        stm32_debug.run_overseer_template("STM32: flash")
+      end, { desc = "Flash STM32 target" })
+      vim.keymap.set("n", "<leader>dse", function()
+        require("lazy").load({ plugins = { "overseer.nvim" } })
+        stm32_debug.run_overseer_template("STM32: erase")
+      end, { desc = "Erase STM32 chip" })
+      vim.keymap.set("n", "<leader>dso", function()
+        require("lazy").load({ plugins = { "overseer.nvim" } })
+        stm32_debug.run_overseer_template("STM32: openocd server")
+      end, { desc = "Start STM32 OpenOCD server" })
+      vim.keymap.set("n", "<leader>dsd", stm32_debug.launch_debug, { desc = "Debug STM32 target" })
+      vim.keymap.set("n", "<leader>dsi", stm32_debug.inspect_environment, { desc = "Inspect STM32 debug environment" })
 
       local debugpy = vim.fn.stdpath("data") .. "/mason/packages/debugpy/venv/bin/python"
       if vim.fn.executable(debugpy) == 1 then

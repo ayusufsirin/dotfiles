@@ -1,0 +1,90 @@
+=== Task 11 STM32 debug controls QA ===
+
+1. STM32 provider detection on fake fixture
+
+Opening fixture source buffer in /tmp/nvim-stm32-fixture
+Buffer name: /tmp/nvim-stm32-fixture/Src/main.c
+CWD: /home/joseph/Projects/SensorSystemROS2/ros_ws
+Active provider: Stm32
+STM32 project root: /tmp/nvim-stm32-fixture
+STM32 project name: project
+
+2. STM32 inactive winbar prefix
+
+%#TabLine# DAP %@v:lua.DebugStm32Build@ Build %T%@v:lua.DebugStm32Clean@ Clean %T%@v:lua.DebugStm32CompileDb@ CompileDB %T%@v:lua.DebugStm32Flash@ Flash %T%@v:lua.DebugStm32Erase@ Erase %T%@v:lua.DebugStm32OpenOCD@ OpenOCD %T%@v:lua.DebugStm32Debug@ Debug %T%@v:lua.DebugStm32Inspect@ Inspect %T%@v:lua.DebugToggleUI@ UI %T | 
+PASS: winbar contains Build
+PASS: winbar contains Flash
+PASS: winbar contains Debug
+PASS: winbar contains OpenOCD
+PASS: winbar contains Inspect
+PASS: no ROS2 label Debug Py in STM32 winbar
+PASS: no ROS2 label Debug C++ in STM32 winbar
+PASS: no ROS2 label Attach in STM32 winbar
+PASS: no ROS2 label Run in STM32 winbar
+
+3. STM32 action callbacks registered
+
+PASS: DebugStm32Build is a global function
+PASS: DebugStm32Clean is a global function
+PASS: DebugStm32CompileDb is a global function
+PASS: DebugStm32Flash is a global function
+PASS: DebugStm32Erase is a global function
+PASS: DebugStm32OpenOCD is a global function
+PASS: DebugStm32Debug is a global function
+PASS: DebugStm32Inspect is a global function
+
+4. ROS2 regression fixture
+
+Buffer name: /tmp/nvim-ros2-regression-fixture/src/demo_pkg/src/main.cpp
+CWD: /home/joseph/Projects/SensorSystemROS2/ros_ws
+Active provider: Ros
+%#TabLine# DAP %@v:lua.DebugRosBuild@ Build %T%@v:lua.DebugRosRun@ Run %T%@v:lua.DebugRosPython@ Debug Py %T%@v:lua.DebugRosCpp@ Debug C++ %T%@v:lua.DebugRosAttach@ Attach %T%@v:lua.DebugToggleUI@ UI %T | 
+PASS: ROS2 winbar contains Build
+PASS: ROS2 winbar contains Run
+PASS: ROS2 winbar contains Debug Py
+PASS: ROS2 winbar contains Debug C++
+PASS: ROS2 winbar contains Attach
+PASS: no STM32 label Flash in ROS2 winbar
+PASS: no STM32 label OpenOCD in ROS2 winbar
+PASS: no STM32 label Erase in ROS2 winbar
+PASS: no STM32 label CompileDB in ROS2 winbar
+
+5. Overlap fixture (both STM32 + ROS2)
+
+Buffer name: /tmp/nvim-both-fixture/Src/main.c
+Active provider in overlap: Stm32
+PASS: STM32 wins over ROS2 in overlapping project (priority 10 < 100)
+
+6. Keymap checks
+
+STM32 <leader>ds* mappings:
+PASS: <leader>dsb mapped (desc=Build STM32 project)
+PASS: <leader>dsc mapped (desc=Clean STM32 project)
+PASS: <leader>dsg mapped (desc=Generate STM32 compile_commands.json)
+PASS: <leader>dsf mapped (desc=Flash STM32 target)
+PASS: <leader>dse mapped (desc=Erase STM32 chip)
+PASS: <leader>dso mapped (desc=Start STM32 OpenOCD server)
+PASS: <leader>dsd mapped (desc=Debug STM32 target)
+PASS: <leader>dsi mapped (desc=Inspect STM32 debug environment)
+
+ROS2 <leader>dr* mappings:
+PASS: <leader>drb mapped (desc=Build ROS2 package)
+PASS: <leader>drr mapped (desc=Run ROS2 node)
+PASS: <leader>drp mapped (desc=Debug ROS2 Python node)
+PASS: <leader>drc mapped (desc=Debug ROS2 C++ node)
+PASS: <leader>dra mapped (desc=Attach ROS2 C++ process)
+PASS: <leader>dre mapped (desc=Inspect ROS2 debug environment)
+
+Generic DAP mappings:
+PASS: <leader>db mapped (desc=Toggle breakpoint)
+PASS: <leader>dc mapped (desc=Continue debugger)
+PASS: <leader>do mapped (desc=Step over)
+PASS: <leader>di mapped (desc=Step into)
+PASS: <leader>dO mapped (desc=Step out)
+PASS: <leader>du mapped (desc=Toggle DAP UI)
+
+7. Collision check
+
+PASS: no keymap collisions detected
+
+=== QA complete ===

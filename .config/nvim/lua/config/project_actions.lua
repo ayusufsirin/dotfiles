@@ -48,6 +48,7 @@ function M.register_provider(provider)
     end
   end
 
+  provider.priority = provider.priority or 100
   providers[provider.name] = provider
 
   if handlers_registered then
@@ -58,7 +59,15 @@ function M.register_provider(provider)
 end
 
 function M.active_provider(path)
+  local ordered = {}
   for _, provider in pairs(providers) do
+    ordered[#ordered + 1] = provider
+  end
+  table.sort(ordered, function(a, b)
+    return a.priority < b.priority
+  end)
+
+  for _, provider in ipairs(ordered) do
     local ok, detected = pcall(provider.detect, path)
     if ok and detected then
       return provider
@@ -148,5 +157,85 @@ local function register_ros2_provider()
 end
 
 register_ros2_provider()
+
+local function register_stm32_provider()
+  local stm32_debug = require("config.stm32_debug")
+
+  M.register_provider({
+    name = "Stm32",
+    priority = 10,
+    detect = function(path)
+      return stm32_debug.current_project(path) ~= nil
+    end,
+    actions = {
+      {
+        label = "Build",
+        callback = "DebugStm32Build",
+        run = function()
+          load_overseer()
+          stm32_debug.run_overseer_template("STM32: build")
+        end,
+      },
+      {
+        label = "Clean",
+        callback = "DebugStm32Clean",
+        run = function()
+          load_overseer()
+          stm32_debug.run_overseer_template("STM32: clean")
+        end,
+      },
+      {
+        label = "CompileDB",
+        callback = "DebugStm32CompileDb",
+        run = function()
+          load_overseer()
+          stm32_debug.run_overseer_template("STM32: generate compile_commands.json")
+        end,
+      },
+      {
+        label = "Flash",
+        callback = "DebugStm32Flash",
+        run = function()
+          load_overseer()
+          stm32_debug.run_overseer_template("STM32: flash")
+        end,
+      },
+      {
+        label = "Erase",
+        callback = "DebugStm32Erase",
+        run = function()
+          load_overseer()
+          stm32_debug.run_overseer_template("STM32: erase")
+        end,
+      },
+      {
+        label = "OpenOCD",
+        callback = "DebugStm32OpenOCD",
+        run = function()
+          load_overseer()
+          stm32_debug.run_overseer_template("STM32: openocd server")
+        end,
+      },
+      {
+        label = "Debug",
+        callback = "DebugStm32Debug",
+        run = function()
+          if load_dap() then
+            stm32_debug.launch_debug()
+          end
+        end,
+      },
+      {
+        label = "Inspect",
+        callback = "DebugStm32Inspect",
+        run = function()
+          stm32_debug.inspect_environment()
+        end,
+      },
+    },
+  })
+end
+
+register_stm32_provider()
 
 return M
