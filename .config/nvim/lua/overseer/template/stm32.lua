@@ -23,8 +23,8 @@ local function config_dir(project)
 end
 
 function M.build_task(project)
-  local cfg = config_dir(project)
-  return task_utils.task("make -C " .. vim.fn.shellescape(cfg), {
+  local command = stm32.build_current_config(project)
+  return task_utils.task(command, {
     name = "STM32: build " .. project.project_name,
     cwd = project.root,
     components = task_utils.quickfix_diagnostics_components(),

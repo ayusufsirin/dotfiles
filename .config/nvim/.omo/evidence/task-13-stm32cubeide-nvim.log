@@ -1,0 +1,259 @@
+
+================================================================================
+Task 13 no-hardware verification start
+================================================================================
+log_path: /home/joseph/.dotfiles/.config/nvim/.omo/evidence/task-13-stm32cubeide-nvim.log
+
+================================================================================
+Setup ROS2 fixture at /tmp/nvim-ros2-regression-fixture
+================================================================================
+ROS2 fixture created.
+
+================================================================================
+Setup STM32 fixture at /tmp/nvim-stm32-regression-fixture
+================================================================================
+STM32 fixture created.
+
+================================================================================
+Setup STM32 no-ELF fixture at /tmp/nvim-stm32-noelf-fixture
+================================================================================
+STM32 no-ELF fixture created.
+
+================================================================================
+Baseline module loads
+================================================================================
+
+================================================================================
+dev_utils load
+================================================================================
+
+$ nvim --headless +lua require("config.dev_utils") +qa
+EXIT_CODE: 0
+
+================================================================================
+ros2_debug load
+================================================================================
+
+$ nvim --headless +lua require("config.ros2_debug") +qa
+EXIT_CODE: 0
+
+================================================================================
+stm32_debug load
+================================================================================
+
+$ nvim --headless +lua require("config.stm32_debug") +qa
+EXIT_CODE: 0
+
+================================================================================
+Overseer template loads
+================================================================================
+
+================================================================================
+overseer ros2+stm32 templates
+================================================================================
+
+$ nvim --headless +lua require("lazy").load({plugins={"overseer.nvim"}}) +lua local ok, err = pcall(function() require("overseer.template").list({ dir = vim.fn.getcwd() }, function(tpls) print("listed:", #tpls) end) end); print("overseer.template.list ok:", ok, err) +qa
+listed: 0
+overseer.template.list ok: true nilEXIT_CODE: 0
+
+================================================================================
+DAP loads
+================================================================================
+
+================================================================================
+nvim-dap load
+================================================================================
+
+$ nvim --headless +lua require("lazy").load({plugins={"nvim-dap"}}) +qa
+EXIT_CODE: 0
+
+================================================================================
+dap-cortex-debug checkhealth
+================================================================================
+
+$ nvim --headless +checkhealth dap-cortex-debug +qa
+Running healthchecks...EXIT_CODE: 0
+
+================================================================================
+ROS2 fixture verification
+================================================================================
+
+================================================================================
+ros2 fixture checks
+================================================================================
+
+$ nvim --headless -u /home/joseph/.dotfiles/.config/nvim/init.lua +lua dofile('/home/joseph/.dotfiles/.config/nvim/.omo/tmp/ros2_fixture_check.lua') +qa
+workspace_root: /tmp/nvim-ros2-regression-fixture
+package_name: demo_pkg
+workspace_build_command: source '/opt/ros/humble/setup.bash' >/dev/null 2>&1 && source '/tmp/nvim-ros2-regression-fixture/install/setup.bash' >/dev/null 2>&1 && 'colcon' 'build' '--symlink-install' '--cmake-args' '-DCMAKE_BUILD_TYPE=Debug' '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
+build_command: source '/opt/ros/humble/setup.bash' >/dev/null 2>&1 && source '/tmp/nvim-ros2-regression-fixture/install/setup.bash' >/dev/null 2>&1 && 'colcon' 'build' '--packages-up-to' 'demo_pkg' '--symlink-install' '--cmake-args' '-DCMAKE_BUILD_TYPE=Debug' '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
+python_configs: 2
+cpp_configs: 2EXIT_CODE: 0
+
+================================================================================
+ROS2 non-workspace verification
+================================================================================
+
+================================================================================
+ros2 non-workspace checks
+================================================================================
+
+$ nvim --headless -u /home/joseph/.dotfiles/.config/nvim/init.lua +lua dofile('/home/joseph/.dotfiles/.config/nvim/.omo/tmp/ros2_nonworkspace_check.lua') +qa
+non_workspace: nil as expectedEXIT_CODE: 0
+
+================================================================================
+STM32 fixture verification
+================================================================================
+
+================================================================================
+stm32 fixture checks
+================================================================================
+
+$ nvim --headless -u /home/joseph/.dotfiles/.config/nvim/init.lua +lua dofile('/home/joseph/.dotfiles/.config/nvim/.omo/tmp/stm32_fixture_check.lua') +qa
+project_name: demo_project
+default_config: Debug
+configs: { "Debug", "Release" }
+makefile: /tmp/nvim-stm32-regression-fixture/Debug/Makefile
+elf_candidates: 1
+  elf: Debug/app.elf /tmp/nvim-stm32-regression-fixture/Debug/app.elf
+build_cmd: make -j"$(nproc 2>/dev/null || echo 4)" all -C '/tmp/nvim-stm32-regression-fixture/Debug'
+clean_cmd: make clean -C '/tmp/nvim-stm32-regression-fixture/Debug'
+compile_cmd: nil
+compile_note: No compile database tool found. Install 'compiledb' (recommended) or 'bear', and ensure it is on PATH.
+flash_cmd: nil
+flash_err: STM32_Programmer_CLI is not on PATH. Install STM32CubeProgrammer (part of STM32CubeCLT) and add it to PATH.
+openocd_cmd: nil
+openocd_err: openocd is not on PATH. Install OpenOCD and add it to PATH for debug-server tasks.
+erase_cmd: nil
+erase_err: STM32_Programmer_CLI is not on PATH. Install STM32CubeProgrammer (part of STM32CubeCLT) and add it to PATH.
+cortex_config_name: STM32 Cortex-M: demo_project
+cortex_config_executable: /tmp/nvim-stm32-regression-fixture/Debug/app.elf
+cortex_config_configFiles: { "interface/stlink.cfg", "target/stm32f4x.cfg" }
+inspect_lines_count: 23EXIT_CODE: 0
+
+================================================================================
+STM32 no-ELF fixture verification
+================================================================================
+
+================================================================================
+stm32 no-ELF checks
+================================================================================
+
+$ nvim --headless -u /home/joseph/.dotfiles/.config/nvim/init.lua +lua dofile('/home/joseph/.dotfiles/.config/nvim/.omo/tmp/stm32_noelf_check.lua') +qa
+project_name: demo_project
+elf_candidates: 0
+flash_cmd: nil
+flash_err: STM32_Programmer_CLI is not on PATH. Install STM32CubeProgrammer (part of STM32CubeCLT) and add it to PATH.
+cortex_configs: nil
+cortex_err: No ELF candidate found for the selected build configEXIT_CODE: 0
+
+================================================================================
+STM32 non-project verification
+================================================================================
+
+================================================================================
+stm32 non-project checks
+================================================================================
+
+$ nvim --headless -u /home/joseph/.dotfiles/.config/nvim/init.lua +lua dofile('/home/joseph/.dotfiles/.config/nvim/.omo/tmp/stm32_nonproject_check.lua') +qa
+non_project: nil as expectedEXIT_CODE: 0
+
+================================================================================
+STM32 Overseer task generation
+================================================================================
+
+================================================================================
+stm32 overseer tasks
+================================================================================
+
+$ nvim --headless -u /home/joseph/.dotfiles/.config/nvim/init.lua +lua dofile('/home/joseph/.dotfiles/.config/nvim/.omo/tmp/stm32_overseer_check.lua') +qa
+generated_task: STM32: build Build the STM32 project with make
+generated_task: STM32: clean Clean the STM32 build directory
+generated_task: STM32: generate compile_commands.json Generate compile_commands.json using compiledb or bear
+generated_task: STM32: flash Flash the selected ELF to the target
+generated_task: STM32: erase Erase the entire STM32 chip
+generated_task: STM32: openocd server Start OpenOCD server for STM32 debugging
+expected_task: STM32: build FOUND
+expected_task: STM32: clean FOUND
+expected_task: STM32: generate compile_commands.json FOUND
+expected_task: STM32: flash FOUND
+expected_task: STM32: erase FOUND
+expected_task: STM32: openocd server FOUND
+build_task: {
+  args = { "-lc", "make -j\"$(nproc 2>/dev/null || echo 4)\" all -C '/tmp/nvim-stm32-regression-fixture/Debug'" },
+  cmd = "bash",
+  components = { "default", { "on_output_quickfix",
+      open = false
+    }, { "on_result_diagnostics",
+      remove_on_restart = true
+    } },
+  cwd = "/tmp/nvim-stm32-regression-fixture",
+  name = "STM32: build demo_project"
+}EXIT_CODE: 0
+
+================================================================================
+STM32 keymaps and winbar
+================================================================================
+
+================================================================================
+stm32 keymaps+winbar
+================================================================================
+
+$ nvim --headless -u /home/joseph/.dotfiles/.config/nvim/init.lua +lua dofile('/home/joseph/.dotfiles/.config/nvim/.omo/tmp/stm32_keymaps_winbar_check.lua') +qa
+stm32_maps_count: 8
+stm32_map:  dsi => Inspect STM32 debug environment
+stm32_map:  dsd => Debug STM32 target
+stm32_map:  dso => Start STM32 OpenOCD server
+stm32_map:  dse => Erase STM32 chip
+stm32_map:  dsf => Flash STM32 target
+stm32_map:  dsg => Generate STM32 compile_commands.json
+stm32_map:  dsc => Clean STM32 project
+stm32_map:  dsb => Build STM32 project
+ros2_maps_count: 6
+ros2_map:  dre => Inspect ROS2 debug environment
+ros2_map:  dra => Attach ROS2 C++ process
+ros2_map:  drc => Debug ROS2 C++ node
+ros2_map:  drp => Debug ROS2 Python node
+ros2_map:  drr => Run ROS2 node
+ros2_map:  drb => Build ROS2 package
+stm32_winbar: %#TabLine# DAP %@v:lua.DebugStm32Build@ Build %T%@v:lua.DebugStm32Clean@ Clean %T%@v:lua.DebugStm32CompileDb@ CompileDB %T%@v:lua.DebugStm32Flash@ Flash %T%@v:lua.DebugStm32Erase@ Erase %T%@v:lua.DebugStm32OpenOCD@ OpenOCD %T%@v:lua.DebugStm32Debug@ Debug %T%@v:lua.DebugStm32Inspect@ Inspect %T%@v:lua.DebugToggleUI@ UI %T | EXIT_CODE: 0
+
+================================================================================
+STM32 missing-tool sanity
+================================================================================
+
+================================================================================
+stm32 missing-tool sanity
+================================================================================
+
+$ nvim --headless -u /home/joseph/.dotfiles/.config/nvim/init.lua +lua dofile('/home/joseph/.dotfiles/.config/nvim/.omo/tmp/stm32_missing_tool_check.lua') +qa
+tool_status_available: arm-none-eabi-gdb, make
+tool_status_missing: STM32_Programmer_CLI, openocd, compiledb, bear
+tool_status_ok: false
+tool_report: STM32_Programmer_CLI missing
+tool_report: openocd missing
+tool_report: arm-none-eabi-gdb available
+tool_report: compiledb missing
+tool_report: bear missing
+tool_report: make available
+tool_status_consistent: okEXIT_CODE: 0
+
+================================================================================
+Verify no hardware commands were executed
+================================================================================
+OK: no STM32_Programmer_CLI -c port=SWD, openocd -f, or arm-none-eabi-gdb target extended-remote execution found
+
+================================================================================
+Cleanup fixtures
+================================================================================
+Fixtures removed.
+
+================================================================================
+Append verification summary to notepad
+================================================================================
+Notepad updated.
+
+================================================================================
+Task 13 no-hardware verification complete
+================================================================================
+All baseline gates passed without hardware connected.
