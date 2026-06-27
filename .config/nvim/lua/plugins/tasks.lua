@@ -26,6 +26,7 @@ return {
         templates = {
           "builtin",
           "ros2",
+          "stm32",
         },
         task_list = {
           direction = "bottom",
