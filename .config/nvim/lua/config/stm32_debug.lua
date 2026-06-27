@@ -17,6 +17,51 @@ local function notify(message, level)
   utils.notify(message, level, { title = "STM32 debug" })
 end
 
+local function load_local_overrides(root)
+  local candidates = {
+    join(root, ".nvim", "stm32.lua"),
+    join(root, ".stm32-nvim.lua"),
+  }
+
+  for _, path in ipairs(candidates) do
+    if is_file(path) then
+      local chunk, err = loadfile(path, "t", {})
+      if not chunk then
+        notify("Invalid local STM32 override file " .. path .. ": " .. tostring(err), vim.log.levels.ERROR)
+        return nil
+      end
+
+      local ok, result = pcall(chunk)
+      if not ok then
+        notify("Failed to load local STM32 override file " .. path .. ": " .. tostring(result), vim.log.levels.ERROR)
+        return nil
+      end
+
+      if type(result) == "table" then
+        return result
+      end
+
+      notify("Local STM32 override file " .. path .. " must return a table", vim.log.levels.WARN)
+      return nil
+    end
+  end
+
+  return nil
+end
+
+local function project_overrides(project)
+  if not project then
+    return {}
+  end
+
+  local overrides = load_local_overrides(project.root) or {}
+  return {
+    openocd_interface = overrides.openocd_interface or project.openocd_interface,
+    openocd_target = overrides.openocd_target or project.openocd_target,
+    svd_file = overrides.svd_file or project.svd_file,
+  }
+end
+
 local function sorted_paths(paths)
   paths = paths or {}
   table.sort(paths, function(left, right)
@@ -311,7 +356,10 @@ end
 
 local function pick_elf(project, elf_path)
   if elf_path then
-    return normalize(elf_path)
+    if is_file(elf_path) then
+      return normalize(elf_path)
+    end
+    return nil
   end
 
   local candidates = project.elf_candidates or M.elf_candidates(project)
@@ -379,12 +427,13 @@ function M.start_openocd(project, opts)
       "interface/stlink.cfg"
   end
 
-  local interface = opts.interface or (project and project.openocd_interface) or "interface/stlink.cfg"
-  local target = opts.target or (project and project.openocd_target) or nil
+  local overrides = project and project_overrides(project) or {}
+  local interface = opts.interface or overrides.openocd_interface or (project and project.openocd_interface) or "interface/stlink.cfg"
+  local target = opts.target or overrides.openocd_target or (project and project.openocd_target) or nil
 
   if not target then
     return nil,
-      "OpenOCD target config is not set. Pass opts.target (e.g. 'stm32f4x.cfg') or set project.openocd_target.",
+      "OpenOCD target config is not set. Pass opts.target (e.g. 'stm32f4x.cfg'), set project.openocd_target, or use a local override file.",
       interface
   end
 
@@ -398,6 +447,122 @@ function M.start_openocd(project, opts)
     .. " -f "
     .. vim.fn.shellescape(target_path)
   return command, interface, target_path
+end
+
+-- DAP configuration -----------------------------------------------------------------
+
+function M.cortex_configurations(opts)
+  opts = opts or {}
+
+  local project = opts.project
+  if not project and opts.path then
+    project = M.current_project(opts.path)
+  end
+  if not project then
+    project = M.current_project()
+  end
+  if not project then
+    return nil, "No STM32CubeIDE project found"
+  end
+
+  local overrides = project_overrides(project)
+  local interface = opts.interface or overrides.openocd_interface or "interface/stlink.cfg"
+  local target = opts.target or overrides.openocd_target
+  if not target then
+    return nil, "OpenOCD target config is not set. Pass opts.target (e.g. 'stm32f4x.cfg'), set project.openocd_target, or use a local override file.", project
+  end
+
+  local target_path = target
+  if not target_path:match("^target/") and not target_path:match("^interface/") then
+    target_path = "target/" .. target_path
+  end
+
+  local elf
+  if opts.elf_path then
+    if is_file(opts.elf_path) then
+      elf = normalize(opts.elf_path)
+    else
+      return nil, "ELF not found: " .. opts.elf_path, project
+    end
+  else
+    local candidates = project.elf_candidates or M.elf_candidates(project)
+    if #candidates == 1 then
+      elf = candidates[1].path
+    elseif #candidates > 1 then
+      return nil, "Multiple ELF candidates found; pass opts.elf_path to select one", project
+    else
+      return nil, "No ELF candidate found for the selected build config", project
+    end
+  end
+
+  local svd_file = opts.svd_file or overrides.svd_file
+  local cwd = opts.cwd or project.root
+
+  local config = {
+    name = "STM32 Cortex-M: " .. project.project_name,
+    type = "cortex-debug",
+    request = "launch",
+    servertype = "openocd",
+    serverpath = "openocd",
+    gdbPath = "arm-none-eabi-gdb",
+    executable = elf,
+    cwd = cwd,
+    runToEntryPoint = "main",
+    configFiles = { interface, target_path },
+  }
+
+  if svd_file and svd_file ~= "" then
+    config.svdFile = normalize(svd_file)
+  end
+
+  return { config }, project
+end
+
+function M.launch_debug(opts)
+  opts = opts or {}
+  local dap = require("dap")
+
+  local project = opts.project
+  if not project and opts.path then
+    project = M.current_project(opts.path)
+  end
+  if not project then
+    project = M.current_project()
+  end
+  if not project then
+    notify("No STM32CubeIDE project found", vim.log.levels.ERROR)
+    return dap.ABORT
+  end
+
+  local overrides = project_overrides(project)
+  local target = opts.target or overrides.openocd_target
+  if not target then
+    target = vim.fn.input("OpenOCD target config (e.g. target/stm32f4x.cfg): ", "target/stm32f4x.cfg", "file")
+    if target == "" then
+      notify("STM32 debug cancelled: no OpenOCD target config selected", vim.log.levels.INFO)
+      return dap.ABORT
+    end
+  end
+
+  local elf = pick_elf(project, opts.elf_path)
+  if not elf then
+    notify("No ELF candidate found for the selected build config", vim.log.levels.ERROR)
+    return dap.ABORT
+  end
+
+  local configs, err = M.cortex_configurations(vim.tbl_extend("force", opts, {
+    project = project,
+    target = target,
+    elf_path = elf,
+  }))
+
+  if not configs then
+    notify(err or "Could not build STM32 debug configuration", vim.log.levels.ERROR)
+    return dap.ABORT
+  end
+
+  dap.run(configs[1])
+  return configs[1]
 end
 
 -- Environment inspection -----------------------------------------------------------

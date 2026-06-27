@@ -1,0 +1,21 @@
+=== Task 10 STM32 DAP verification ===
+Date: 2026-06-27T08:49:23+03:00
+
+Fixture with ELF: /tmp/nvim-task10-3128685/stm32-with-elf
+Fixture without ELF: /tmp/nvim-task10-3128685/stm32-no-elf
+
+--- Test 1: cortex_configurations with ELF fixture ---
+OK: config name=STM32 Cortex-M: project executable=/tmp/nvim-task10-3128685/stm32-with-elf/Debug/app.elfExit: 0
+
+--- Test 2: DAP load preserves codelldb Launch file ---
+OK: codelldb Launch file preserved in dap.configurations.cExit: 0
+
+--- Test 3: DAP load inside ELF fixture with override adds STM32 config ---
+OK: cortex-debug config added to dap.configurations.cExit: 0
+
+--- Test 4: launch_debug no-ELF fixture returns dap.ABORT ---
+Error in command line:
+No ELF candidate found for the selected build config
+OK: launch_debug returned dap.ABORT for missing ELFExit: 0
+
+=== Verification complete ===

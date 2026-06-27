@@ -28,6 +28,7 @@ return {
       local dapui = require("dapui")
       local debug_ui = require("config.debug_ui")
       local ros2_debug = require("config.ros2_debug")
+      local stm32_debug = require("config.stm32_debug")
 
       require("nvim-dap-virtual-text").setup({
         commented = true,
@@ -136,6 +137,12 @@ return {
       vim.list_extend(dap.configurations.python, ros2_debug.python_configurations())
       vim.list_extend(dap.configurations.c, ros2_debug.cpp_configurations())
       vim.list_extend(dap.configurations.cpp, ros2_debug.cpp_configurations())
+
+      local stm32_configs = stm32_debug.cortex_configurations()
+      if stm32_configs then
+        vim.list_extend(dap.configurations.c, stm32_configs)
+        vim.list_extend(dap.configurations.cpp, stm32_configs)
+      end
     end,
   },
 }

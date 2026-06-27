@@ -41,3 +41,10 @@
 - `dap-cortex-debug.setup({ dapui_rtt = true, node_path = "node" })` is called after `dapui.setup` and before DAP event listeners, keeping existing codelldb/debugpy/ROS2 configs untouched.
 - Mason `ensure_installed` now builds dynamically: `cortex-debug` is inserted only when `mason-registry.has_package("cortex-debug")` reports true, preventing installer errors if the registry entry is unavailable.
 - Headless verification passes with the full PATH, with a constrained PATH, and with `checkhealth dap-cortex-debug`; no hardware or STM32 toolchain is required.
+
+## 2026-06-27T08:49:23+03:00 - Task 10 STM32 Cortex-M DAP configurations
+- `stm32_debug.cortex_configurations()` resolves DAP config only when the OpenOCD target is explicit (opts, project field, or `.nvim/stm32.lua`/`.stm32-nvim.lua` override) and the ELF is unambiguous (explicit path or exactly one candidate).
+- The `executable` field is resolved to an absolute path before returning so the config is deterministic; `launch_debug()` prompts for target/ELF when needed and returns `dap.ABORT` instead of running an invalid config.
+- `dap.configurations.c` and `.cpp` are extended after codelldb and ROS2 configs, so `Launch file` and ROS2 C++ configs remain intact.
+- A sandboxed local override loader (`loadfile(path, "t", {})`) lets projects keep interface/target/SVD settings under `.nvim/stm32.lua` without executing arbitrary global code.
+- Headless QA for `cortex_configurations` must capture the second return value as the project object, because the function returns `(configs, project)` on success and `(nil, err, project)` on failure.
