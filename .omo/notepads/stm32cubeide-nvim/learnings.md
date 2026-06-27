@@ -62,3 +62,11 @@
 - Documentation explicitly states that CubeMX/CubeIDE owns `.ioc`/Makefile generation and that the Neovim workflow does not auto-flash, auto-erase, auto-connect, or mutate CubeIDE metadata.
 - PROMPTS.md adds a future-maintenance prompt (#10) for STM32/embedded workflow evolution with the same guardrails.
 - Verification grep targets: `STM32`, `CubeIDE`, `STM32_Programmer_CLI`, `OpenOCD`, `compile_commands` in README.md; `STM32`/`embedded` in PROMPTS.md; no `auto-flash` or `automatically flash` misleading claims in README.md.
+
+
+## 2026-06-27T09:17:08+03:00 - Task 14 gated hardware QA
+- README.md "Optional hardware QA" section is now explicitly gated: it requires `export STM32_QA_HARDWARE=1` plus user-supplied OpenOCD target, project path, and ELF path before any hardware command is considered.
+- Checklist remains optional and manual; it is not executed by baseline verification or automated scripts.
+- Included example commands: `STM32_Programmer_CLI -l`, `STM32_Programmer_CLI -c port=SWD`, `openocd -f interface/stlink.cfg -f target/<target>.cfg -c "init; targets; shutdown"`, and `arm-none-eabi-gdb <elf> -ex "target extended-remote :3333" -ex "monitor reset halt" -ex "info registers" -ex "detach" -ex "quit"`.
+- Task 13 evidence inspection confirms no `STM32_QA_HARDWARE=1` was set and no actual `STM32_Programmer_CLI -c port=SWD`, `openocd -f`, or `arm-none-eabi-gdb ... target extended-remote` execution occurred by default.
+- No hardware commands were run during Task 14; only README edits, grep verification, and evidence logging were performed.

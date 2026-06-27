@@ -319,14 +319,36 @@ Baseline verification requires no board, no ST-LINK, and no STM32 toolchain:
 
 ### Optional hardware QA
 
-Real flashing, OpenOCD connections, and GDB debugging require a connected board and probe. These checks are opt-in and are not executed automatically. A reasonable manual checklist, when you choose to run it, is:
+Real flashing, OpenOCD connections, and GDB debugging require a connected board and probe. The checks below are **optional, manual, and not run by baseline verification**. Do not run them automatically or put them in scripts that run by default.
 
-- Confirm the probe is visible: `STM32_Programmer_CLI -l`
-- Confirm SWD connection: `STM32_Programmer_CLI -c port=SWD`
-- Start OpenOCD and verify target detection: `openocd -f interface/stlink.cfg -f target/<target>.cfg -c "init; targets; shutdown"`
-- Connect GDB: `arm-none-eabi-gdb <elf> -ex "target extended-remote :3333" -ex "monitor reset halt" -ex "info registers" -ex "detach" -ex "quit"`
+Before running any hardware command, you must explicitly opt in **and** supply the project-specific context yourself:
 
-Keep these commands out of automated scripts unless you explicitly set a gate such as `STM32_QA_HARDWARE=1` and review every command before it runs.
+1. Set the gate variable:
+   ```bash
+   export STM32_QA_HARDWARE=1
+   ```
+2. Provide your own OpenOCD target config (for example `target/stm32f4x.cfg`, `target/stm32h7x.cfg`, or the cfg matching your MCU), your own project path, and your own ELF path. The commands below use placeholders such as `<target>`, `<project-path>`, and `<elf>`; replace them with real values for your board and build.
+
+Manual hardware smoke checklist (run only after the two steps above):
+
+- Confirm the probe is visible:
+  ```bash
+  STM32_Programmer_CLI -l
+  ```
+- Confirm SWD connection (does not erase or flash; replace `<project-path>` with your project directory if you run it from a script):
+  ```bash
+  STM32_Programmer_CLI -c port=SWD
+  ```
+- Start OpenOCD and verify target detection (replace `<target>` with your MCU cfg, for example `stm32f4x`):
+  ```bash
+  openocd -f interface/stlink.cfg -f target/<target>.cfg -c "init; targets; shutdown"
+  ```
+- Connect GDB to the running OpenOCD server and inspect registers (replace `<elf>` with your built ELF path):
+  ```bash
+  arm-none-eabi-gdb <elf> -ex "target extended-remote :3333" -ex "monitor reset halt" -ex "info registers" -ex "detach" -ex "quit"
+  ```
+
+These commands are examples for you to copy, review, and run deliberately. Automated verification and CI scripts must skip them unless `STM32_QA_HARDWARE=1` is set and every placeholder has been replaced by an explicit, reviewed value.
 
 ## Notes
 
