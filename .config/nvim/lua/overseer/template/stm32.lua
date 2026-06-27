@@ -32,8 +32,8 @@ function M.build_task(project)
 end
 
 function M.clean_task(project)
-  local cfg = config_dir(project)
-  return task_utils.task("make clean -C " .. vim.fn.shellescape(cfg), {
+  local command = stm32.clean_current_config(project)
+  return task_utils.task(command, {
     name = "STM32: clean " .. project.project_name,
     cwd = project.root,
     components = task_utils.default_components(),
@@ -41,52 +41,41 @@ function M.clean_task(project)
 end
 
 function M.compile_db_task(project)
-  local cfg = config_dir(project)
-
-  if dev_utils.executable("compiledb") then
-    return task_utils.task("compiledb make -C " .. vim.fn.shellescape(cfg), {
-      name = "STM32: generate compile_commands.json (compiledb) " .. project.project_name,
-      cwd = project.root,
-      components = task_utils.quickfix_diagnostics_components(),
-    })
+  local command, _config, note = stm32.generate_compile_commands(project)
+  if not command then
+    return missing_tool_task({ "compiledb", "bear" }, "compile_commands.json generation")
   end
 
-  if dev_utils.executable("bear") then
-    return task_utils.task("bear -- make -C " .. vim.fn.shellescape(cfg), {
-      name = "STM32: generate compile_commands.json (bear) " .. project.project_name,
-      cwd = project.root,
-      components = task_utils.quickfix_diagnostics_components(),
-    })
+  local tool = command:match("^(%S+)")
+  local name = "STM32: generate compile_commands.json (" .. tool .. ") " .. project.project_name
+  if note then
+    name = name .. " [" .. note .. "]"
   end
 
-  return missing_tool_task({ "compiledb", "bear" }, "compile_commands.json generation")
+  return task_utils.task(command, {
+    name = name,
+    cwd = project.root,
+    components = task_utils.quickfix_diagnostics_components(),
+  })
 end
 
 function M.flash_task(project)
   local candidates = project.elf_candidates or {}
   local selected
+  local command
 
   if #candidates == 0 then
     selected = vim.fn.input("Path to ELF: ", dev_utils.join(project.root, config_dir(project), ""), "file")
     if selected == "" then
       return nil
     end
-  elseif #candidates == 1 then
-    selected = candidates[1].path
+    command = "STM32_Programmer_CLI -c port=SWD -w " .. vim.fn.shellescape(selected) .. " -v -rst"
   else
-    local labels = vim.tbl_map(function(candidate)
-      return candidate.label
-    end, candidates)
-    local idx = vim.fn.inputlist(vim.list_extend({ "Select ELF to flash:" }, labels))
-    if idx < 1 or idx > #candidates then
+    command, selected = stm32.flash_elf(project)
+    if not command then
       return nil
     end
-    selected = candidates[idx].path
   end
-
-  local command = "STM32_Programmer_CLI -c port=SWD -w "
-    .. vim.fn.shellescape(selected)
-    .. " -v -rst"
 
   return task_utils.task(command, {
     name = "STM32: flash " .. vim.fn.fnamemodify(selected, ":t"),
@@ -110,12 +99,22 @@ function M.erase_task(project)
 end
 
 function M.openocd_task(project)
-  local target_cfg = vim.fn.input("Target OpenOCD config (e.g. target/stm32f4x.cfg): ", "target/stm32f4x.cfg", "file")
-  if target_cfg == "" then
-    return nil
-  end
+  local command, err = stm32.start_openocd(project)
+  if not command then
+    if err and err:match("openocd is not on PATH") then
+      return missing_tool_task({ "openocd" }, "OpenOCD server")
+    end
 
-  local command = "openocd -f interface/stlink.cfg -f " .. vim.fn.shellescape(target_cfg)
+    local target_cfg = vim.fn.input("Target OpenOCD config (e.g. target/stm32f4x.cfg): ", "target/stm32f4x.cfg", "file")
+    if target_cfg == "" then
+      return nil
+    end
+
+    command = stm32.start_openocd(project, { target = target_cfg })
+    if not command then
+      return nil
+    end
+  end
 
   return task_utils.task(command, {
     name = "STM32: openocd server",

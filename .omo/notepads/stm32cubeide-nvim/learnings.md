@@ -70,3 +70,15 @@
 - Included example commands: `STM32_Programmer_CLI -l`, `STM32_Programmer_CLI -c port=SWD`, `openocd -f interface/stlink.cfg -f target/<target>.cfg -c "init; targets; shutdown"`, and `arm-none-eabi-gdb <elf> -ex "target extended-remote :3333" -ex "monitor reset halt" -ex "info registers" -ex "detach" -ex "quit"`.
 - Task 13 evidence inspection confirms no `STM32_QA_HARDWARE=1` was set and no actual `STM32_Programmer_CLI -c port=SWD`, `openocd -f`, or `arm-none-eabi-gdb ... target extended-remote` execution occurred by default.
 - No hardware commands were run during Task 14; only README edits, grep verification, and evidence logging were performed.
+
+## 2026-06-27T06:11:58Z - Task 13 full no-hardware verification
+- Ran baseline module loads (dev_utils, ros2_debug, stm32_debug): all exit 0.
+- Ran Overseer ros2+stm32 template loads: exit 0 using supported template.list API with callback.
+- Ran nvim-dap load and dap-cortex-debug checkhealth: completed without hardware execution.
+- ROS2 fake fixture verified workspace/package/build command/config counts.
+- STM32 fake fixture verified project detection, configs, ELF candidates, build/clean/flash/erase/openocd command builders, cortex DAP config fields.
+- STM32 no-ELF fixture verified actionable missing-ELF/errors without execution.
+- Missing-tool sanity confirmed tool status reporting is consistent.
+- Transcript checked: no STM32_Programmer_CLI -c port=SWD, openocd -f, or arm-none-eabi-gdb target extended-remote executed by default.
+- Evidence log: /home/joseph/.dotfiles/.omo/evidence/task-13-stm32cubeide-nvim.log
+- Fixtures cleaned up after capture.
