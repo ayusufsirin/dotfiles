@@ -22,24 +22,30 @@ return {
 
       require("fidget").setup({})
 
+      local mason_registry_ok, mason_registry = pcall(require, "mason-registry")
+      local ensure_installed = {
+        "clangd",
+        "clang-format",
+        "codelldb",
+        "debugpy",
+        "lua-language-server",
+        "markdownlint-cli2",
+        "marksman",
+        "prettier",
+        "pyright",
+        "rstcheck",
+        "ruff",
+        "shellcheck",
+        "shfmt",
+        "stylua",
+        "yaml-language-server",
+      }
+      if mason_registry_ok and mason_registry.has_package("cortex-debug") then
+        table.insert(ensure_installed, 4, "cortex-debug")
+      end
+
       require("mason-tool-installer").setup({
-        ensure_installed = {
-          "clangd",
-          "clang-format",
-          "codelldb",
-          "debugpy",
-          "lua-language-server",
-          "markdownlint-cli2",
-          "marksman",
-          "prettier",
-          "pyright",
-          "rstcheck",
-          "ruff",
-          "shellcheck",
-          "shfmt",
-          "stylua",
-          "yaml-language-server",
-        },
+        ensure_installed = ensure_installed,
         auto_update = false,
         run_on_start = true,
       })

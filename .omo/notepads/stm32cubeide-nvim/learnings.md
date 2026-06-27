@@ -35,3 +35,9 @@
 - `start_openocd` defaults to `interface/stlink.cfg` and requires an explicit target cfg override; it now also checks `openocd` availability.
 - Build command uses a portable `$(nproc 2>/dev/null || echo 4)` jobs expression so it degrades safely on systems without `nproc`.
 - Fake-fixture QA passes with all STM32 tools mocked and with all STM32 tools missing; no hardware or real toolchain execution occurred.
+
+## 2026-06-27T08:42:00+03:00 - Task 8 nvim-dap-cortex-debug wiring
+- Added `jedrzejboczar/nvim-dap-cortex-debug` as a dependency of `nvim-dap`; setup is guarded by `pcall` so missing STM32 tooling never crashes Neovim startup.
+- `dap-cortex-debug.setup({ dapui_rtt = true, node_path = "node" })` is called after `dapui.setup` and before DAP event listeners, keeping existing codelldb/debugpy/ROS2 configs untouched.
+- Mason `ensure_installed` now builds dynamically: `cortex-debug` is inserted only when `mason-registry.has_package("cortex-debug")` reports true, preventing installer errors if the registry entry is unavailable.
+- Headless verification passes with the full PATH, with a constrained PATH, and with `checkhealth dap-cortex-debug`; no hardware or STM32 toolchain is required.

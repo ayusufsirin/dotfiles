@@ -7,6 +7,7 @@ return {
       "nvim-neotest/nvim-nio",
       "theHamsta/nvim-dap-virtual-text",
       "mfussenegger/nvim-dap-python",
+      "jedrzejboczar/nvim-dap-cortex-debug",
     },
     keys = {
       { "<leader>db", mode = "n", desc = "Toggle breakpoint" },
@@ -39,6 +40,16 @@ return {
           border = "rounded",
         },
       })
+
+      local cortex_debug_ok, cortex_debug = pcall(require, "dap-cortex-debug")
+      if cortex_debug_ok then
+        cortex_debug.setup({
+          dapui_rtt = true,
+          node_path = "node",
+        })
+      else
+        vim.notify("nvim-dap-cortex-debug not available: " .. tostring(cortex_debug), vim.log.levels.WARN)
+      end
 
       dap.listeners.after.event_initialized["dapui_config"] = function()
         dapui.open()
