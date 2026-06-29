@@ -178,7 +178,7 @@ function M.file_winbar_prefix()
       " | ",
     })
   else
-    for _, action in ipairs(require("config.project_actions").inactive_buttons()) do
+    for _, action in ipairs(require("appdev.integrations.ui").inactive_buttons()) do
       chunks[#chunks + 1] = button(action.callback, action.label)
     end
 
@@ -288,7 +288,7 @@ function M.setup_click_handlers()
     end
   end
 
-  require("config.project_actions").setup_click_handlers()
+  require("appdev.integrations.ui").setup_click_handlers()
 end
 
 function M.setup(dap)

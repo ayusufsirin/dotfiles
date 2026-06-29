@@ -25,8 +25,7 @@ return {
       require("overseer").setup({
         templates = {
           "builtin",
-          "ros2",
-          "stm32",
+          "appdev",
         },
         task_list = {
           direction = "bottom",
