@@ -151,6 +151,51 @@ Common causes:
 - interrupted first boot
 - old system `nvim`
 
+## `appdev.nvim` local plugin
+
+ROS2 and STM32 workflows are routed through a local plugin namespace,
+`appdev.nvim`. The plugin detects the active application type from the current
+file, exposes command-first actions, and delegates heavy UI to `overseer.nvim`
+and `nvim-dap`.
+
+Primary commands:
+
+- `:AppDevBuild` runs the active adapter's build action.
+- `:AppDevRun` runs the active adapter's run action when available.
+- `:AppDevDebug` launches the active adapter's default debug flow.
+- `:AppDevInspect` opens adapter-specific environment/project details.
+- `:AppDevAction` selects or runs an adapter action by id.
+- `:AppDevTask` selects task-style actions only.
+- `:AppDevRefresh` clears cached project detection.
+
+Adapters are registered from `lua/appdev/adapters/`. STM32 has higher priority
+than ROS2, so a directory with both marker sets shows STM32 actions. Project
+actions in keymaps and the winbar are thin wrappers over these commands.
+
+STM32CubeCLT can be configured globally through an environment variable or setup
+options:
+
+```bash
+export STM32CUBECLT_DIR=/path/to/STM32CubeCLT
+```
+
+```lua
+require("appdev").setup({
+  adapters = {
+    stm32 = {
+      cubeclt = {
+        install_dir = "/path/to/STM32CubeCLT",
+        workspace_dir = vim.fn.stdpath("cache") .. "/appdev-stm32-workspace",
+      },
+    },
+  },
+})
+```
+
+When a CubeIDE project has `.cproject` Debug/Release configurations but no
+generated `Debug/Makefile`, `:AppDevBuild` uses the CubeCLT headless managed
+builder. If a generated Makefile exists, AppDev keeps using `make`.
+
 ## ROS2 debugging
 
 The config includes DAP support for Python and C++ ROS2 packages without requiring a
@@ -207,7 +252,8 @@ Project detection walks upward from the current file or working directory and re
 
 Required on the host:
 
-- `make` — used to drive the CubeIDE-generated Makefile.
+- STM32CubeCLT — used for headless CubeIDE managed builds when generated Makefiles are absent.
+- `make` — used to drive CubeIDE-generated Makefiles when they exist.
 - STM32CubeProgrammer CLI (`STM32_Programmer_CLI`) — used for flash and erase tasks. It is normally installed as part of STM32CubeCLT or standalone STM32CubeProgrammer. Add it to your `PATH`.
 - `arm-none-eabi-gdb` — used by `nvim-dap-cortex-debug` for DAP debugging. It is also part of STM32CubeCLT or a standalone GNU Arm Embedded Toolchain.
 
@@ -223,8 +269,9 @@ If these tools are missing, Neovim still starts cleanly and the STM32 tasks simp
 
 Inside an STM32CubeIDE project, open the Overseer task picker with `<leader>or` or run `:OverseerRun`. The following tasks appear:
 
-- `STM32: build` — `make -C <default-config>` (default config is `Debug` when present).
-- `STM32: clean` — `make clean -C <default-config>`.
+- `STM32: build` — uses `make -C <default-config>` when generated Makefiles exist, otherwise uses the configured STM32CubeCLT headless managed builder.
+- `STM32: clean` — uses `make clean` or CubeCLT clean-build for managed-only projects.
+- `STM32: refresh managed build` — imports/refreshes the CubeIDE project in the configured CubeCLT workspace.
 - `STM32: generate compile_commands.json` — prefers `compiledb`, falls back to `bear`; produces an actionable message if neither is installed.
 - `STM32: flash` — prompts for or auto-selects an ELF, then builds the `STM32_Programmer_CLI` command. It does **not** run until you start the task.
 - `STM32: erase` — requires typing `erase` to confirm before building the chip-erase command.
@@ -251,12 +298,13 @@ When no debug session is active, the file winbar shows project-appropriate butto
 
 ### Project-local overrides
 
-Some settings vary by board or probe and should live with the project, not in the dotfiles. Create one of:
+Some settings vary by board or probe and should live with the project, not in the dotfiles. Project-local Lua overrides are executable code and are only read because this config explicitly enables trusted project Lua in `lua/plugins/appdev.lua`. Create one of:
 
+- `.nvim/appdev.lua`
 - `.nvim/stm32.lua`
 - `.stm32-nvim.lua`
 
-The file must return a Lua table, for example:
+The file must return a Lua table, either directly or under a `stm32` key:
 
 ```lua
 return {
@@ -312,10 +360,11 @@ This approach keeps machine-specific toolchain paths out of the shared dotfiles 
 
 Baseline verification requires no board, no ST-LINK, and no STM32 toolchain:
 
-- `nvim --headless '+lua require("config.stm32_debug")' +qa` loads the module cleanly.
-- `nvim --headless '+lua require("lazy").load({ plugins = { "overseer.nvim" } })' '+lua require("overseer.template").load("stm32")' +qa` loads the task templates.
+- `nvim --headless -u NONE -l tests/appdev_smoke.lua` verifies adapter registration and no-hardware project detection.
+- `nvim --headless '+lua require("appdev").setup({ project_config = { trusted_lua = false } })' +qa` loads the plugin cleanly.
+- `nvim --headless '+lua require("lazy").load({ plugins = { "overseer.nvim" } })' '+lua require("overseer.template.appdev")' +qa` loads the task template bridge.
 - `nvim --headless '+lua require("lazy").load({ plugins = { "nvim-dap" } })' +qa` loads DAP cleanly.
-- Open a file inside a fake STM32 fixture (`.ioc`, `.project`, `Debug/Makefile`) and run `<leader>dsi` or `:lua require("config.stm32_debug").inspect_environment()` to see detected project details without running any tools.
+- Open a file inside a fake STM32 fixture (`.ioc`, `.project`, `Debug/Makefile`) and run `<leader>dsi` or `:AppDevInspect` to see detected project details without running any tools.
 
 ### Optional hardware QA
 
