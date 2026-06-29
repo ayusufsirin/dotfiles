@@ -19,6 +19,13 @@ opt.relativenumber = true
 opt.signcolumn = "yes"
 opt.cursorline = true
 opt.wrap = false
+opt.statuscolumn = table.concat({
+  "%@v:lua.ScDapBreakpoint@",
+  "%s",
+  "%T",
+  "%=",
+  "%{v:relnum == 0 ? v:lnum : v:relnum} ",
+})
 opt.scrolloff = 8
 opt.sidescrolloff = 8
 opt.showmode = false

@@ -222,8 +222,11 @@ function M.setup_click_handlers()
   end
   handlers_registered = true
 
-  _G.ScDapBreakpoint = function(...)
-    require("config.debug_ui").toggle_breakpoint(select(1, ...))
+  _G.ScDapBreakpoint = function(_, _, button, _)
+    require("config.debug_ui").toggle_breakpoint({
+      button = button,
+      mousepos = vim.fn.getmousepos(),
+    })
   end
 
   _G.DebugContinue = function()

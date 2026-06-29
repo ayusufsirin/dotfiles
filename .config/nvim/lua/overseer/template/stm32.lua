@@ -119,6 +119,28 @@ function M.flash_task(project)
   })
 end
 
+function M.run_task(project)
+  local command, err = stm32.reset_run(project)
+  if not command and err and err:match("OpenOCD target") then
+    local target_cfg = vim.fn.input("Target OpenOCD config (e.g. target/stm32f4x.cfg): ", "target/stm32f4x.cfg", "file")
+    if target_cfg == "" then
+      return nil
+    end
+
+    command = stm32.reset_run(project, { target = target_cfg })
+  end
+
+  if not command then
+    return missing_tool_task({ "OpenOCD", "STM32_Programmer_CLI" }, err or "run/reset")
+  end
+
+  return task_utils.task(command, {
+    name = "STM32: run/reset " .. project.project_name,
+    cwd = project.root,
+    components = task_utils.default_components(),
+  })
+end
+
 function M.erase_task(project)
   local confirm = vim.fn.input("Type 'erase' to confirm full chip erase: ")
   if confirm ~= "erase" then

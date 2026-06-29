@@ -11,7 +11,7 @@ local executable = utils.executable
 local command_availability = utils.command_availability
 
 local BUILD_CONFIG_ORDER = { "Debug", "Release" }
-local STM32_TOOLS = { "STM32_Programmer_CLI", "ST-LINK_gdbserver", "openocd", "arm-none-eabi-gdb", "compiledb", "bear", "make" }
+local STM32_TOOLS = { "STM32_Programmer_CLI", "ST-LINK_gdbserver", "openocd", "arm-none-eabi-gdb", "compiledb", "bear", "make", "node" }
 local HEADLESS_APP = "org.eclipse.cdt.managedbuilder.core.headlessbuild"
 
 local function notify(message, level)
@@ -182,6 +182,9 @@ local function resolve_cubeclt()
   tools.stlink_gdbserver = tools.stlink_gdbserver or path_or_command("ST-LINK_gdbserver")
   tools.programmer = tools.programmer or path_or_command("STM32_Programmer_CLI")
   tools.make = path_or_command("make")
+  tools.compiledb = path_or_command("compiledb")
+  tools.bear = path_or_command("bear")
+  tools.node = path_or_command("node")
 
   return tools
 end
@@ -610,6 +613,7 @@ function M.inspect_lines(project)
     "CubeCLT install: " .. (tools.install_dir or "not configured"),
     "CubeCLT headless: " .. (tools.headless or "not found"),
     "CubeCLT workspace: " .. (tools.workspace_dir or "not configured"),
+    "Node: " .. (tools.node or "not found"),
     "CubeIDE container: " .. (container.enabled and container.image or "disabled"),
     "Warnings: " .. (#warnings > 0 and table.concat(warnings, "; ") or "none"),
   }
@@ -884,6 +888,29 @@ function M.flash_elf(project, elf_path)
   return command, selected, project
 end
 
+function M.reset_run(project, opts)
+  opts = opts or {}
+  if not project then
+    return nil, "No STM32CubeIDE project found"
+  end
+
+  local tools = resolve_cubeclt()
+  if tools.openocd then
+    local command, err = M.start_openocd(project, opts)
+    if not command then
+      return nil, err, project
+    end
+
+    return command .. " -c " .. vim.fn.shellescape("init; reset run; shutdown"), project
+  end
+
+  if tools.programmer then
+    return vim.fn.shellescape(tools.programmer) .. " -c port=SWD -rst", project
+  end
+
+  return nil, "OpenOCD or STM32_Programmer_CLI is required to reset/run the target", project
+end
+
 function M.erase_chip(confirmed)
   if not confirmed then
     return nil,
@@ -949,6 +976,9 @@ function M.cortex_configurations(opts)
 
   local overrides = project_overrides(project)
   local tools = resolve_cubeclt()
+  if not tools.node then
+    return nil, "node is required by cortex-debug. Install Node.js or add it to PATH.", project
+  end
   local use_openocd = tools.openocd or not tools.stlink_gdbserver
   local interface = opts.interface or overrides.openocd_interface or "interface/stlink.cfg"
   local target = opts.target or overrides.openocd_target
@@ -1074,10 +1104,14 @@ local function tool_status_lines()
     "  Resolved CubeCLT tools:",
     "    headless: " .. (tools.headless or "not found"),
     "    gcc: " .. (tools.gcc or "not found"),
+    "    make: " .. (tools.make or "not found"),
     "    gdb: " .. (tools.gdb or "not found"),
     "    openocd: " .. (tools.openocd or "not found"),
     "    stlink_gdbserver: " .. (tools.stlink_gdbserver or "not found"),
     "    programmer: " .. (tools.programmer or "not found"),
+    "    compiledb: " .. (tools.compiledb or "not found"),
+    "    bear: " .. (tools.bear or "not found"),
+    "    node: " .. (tools.node or "not found"),
   }
 
   return lines, status
@@ -1102,6 +1136,7 @@ local function suggested_steps_lines(project, status)
   end
 
   steps[#steps + 1] = "Build: :AppDevBuild"
+  steps[#steps + 1] = "Run/reset target: :AppDevRun"
   steps[#steps + 1] = "Clean: :AppDevAction clean"
   if project.default_config and not project.makefile then
     if tools.headless then
@@ -1137,6 +1172,10 @@ local function suggested_steps_lines(project, status)
   if not tools.gdb then
     steps[#steps + 1] = "Install arm-none-eabi-gdb (part of STM32CubeCLT or ARM GCC) for DAP debugging."
   end
+  if not tools.node then
+    steps[#steps + 1] = "Install Node.js or add 'node' to PATH for cortex-debug / nvim-dap-cortex-debug."
+  end
+
 
   return steps
 end

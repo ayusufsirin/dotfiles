@@ -35,6 +35,14 @@ function M.actions(project)
       end,
     },
     {
+      id = "run",
+      label = "Run",
+      kind = "task",
+      run = function()
+        return stm32().run_overseer_template("STM32: run")
+      end,
+    },
+    {
       id = "debug",
       label = "Debug",
       kind = "debug",
@@ -109,6 +117,7 @@ function M.health()
   checks[#checks + 1] = { ok = tools.programmer ~= nil, name = "STM32_Programmer_CLI" }
   checks[#checks + 1] = { ok = tools.openocd ~= nil, name = "openocd" }
   checks[#checks + 1] = { ok = tools.gdb ~= nil, name = "arm-none-eabi-gdb" }
+  checks[#checks + 1] = { ok = tools.node ~= nil, name = "node" }
   return checks
 end
 
