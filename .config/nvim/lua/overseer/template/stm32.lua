@@ -22,8 +22,22 @@ local function config_dir(project)
   return project.default_config
 end
 
+local function command_error(second, third)
+  if type(second) == "string" then
+    return second
+  end
+  if type(third) == "string" then
+    return third
+  end
+  return nil
+end
+
 function M.build_task(project)
-  local command = stm32.build_current_config(project)
+  local command, second, third = stm32.build_current_config(project)
+  if not command then
+    return missing_tool_task({ "STM32CubeCLT headless builder", "generated Makefile" }, command_error(second, third) or "build")
+  end
+
   return task_utils.task(command, {
     name = "STM32: build " .. project.project_name,
     cwd = project.root,
@@ -32,7 +46,11 @@ function M.build_task(project)
 end
 
 function M.clean_task(project)
-  local command = stm32.clean_current_config(project)
+  local command, second, third = stm32.clean_current_config(project)
+  if not command then
+    return missing_tool_task({ "STM32CubeCLT headless builder", "generated Makefile" }, command_error(second, third) or "clean")
+  end
+
   return task_utils.task(command, {
     name = "STM32: clean " .. project.project_name,
     cwd = project.root,
@@ -40,10 +58,24 @@ function M.clean_task(project)
   })
 end
 
-function M.compile_db_task(project)
-  local command, _config, note = stm32.generate_compile_commands(project)
+function M.refresh_managed_build_task(project)
+  local command, second, third = stm32.refresh_managed_build(project)
   if not command then
-    return missing_tool_task({ "compiledb", "bear" }, "compile_commands.json generation")
+    return missing_tool_task({ "STM32CubeCLT headless builder" }, command_error(second, third) or "managed build refresh")
+  end
+
+  return task_utils.task(command, {
+    name = "STM32: refresh managed build " .. project.project_name,
+    cwd = project.root,
+    components = task_utils.default_components(),
+  })
+end
+
+function M.compile_db_task(project)
+  local command, second, third = stm32.generate_compile_commands(project)
+  local note = command_error(second, third)
+  if not command then
+    return missing_tool_task({ "generated Makefile plus compiledb/bear" }, note or "compile_commands.json generation")
   end
 
   local tool = command:match("^(%S+)")
@@ -69,7 +101,10 @@ function M.flash_task(project)
     if selected == "" then
       return nil
     end
-    command = "STM32_Programmer_CLI -c port=SWD -w " .. vim.fn.shellescape(selected) .. " -v -rst"
+    command = stm32.flash_elf(project, selected)
+    if not command then
+      return missing_tool_task({ "STM32_Programmer_CLI" }, "flash")
+    end
   else
     command, selected = stm32.flash_elf(project)
     if not command then
@@ -91,7 +126,12 @@ function M.erase_task(project)
     return nil
   end
 
-  return task_utils.task("STM32_Programmer_CLI -c port=SWD -e all", {
+  local command, err = stm32.erase_chip(true)
+  if not command then
+    return missing_tool_task({ "STM32_Programmer_CLI" }, err or "erase")
+  end
+
+  return task_utils.task(command, {
     name = "STM32: erase chip",
     cwd = project.root,
     components = task_utils.default_components(),
@@ -138,6 +178,10 @@ return {
 
       task_utils.template("STM32: clean", "Clean the STM32 build directory", function()
         return M.clean_task(project)
+      end),
+
+      task_utils.template("STM32: refresh managed build", "Import/refresh the STM32CubeIDE managed build in CubeCLT", function()
+        return M.refresh_managed_build_task(project)
       end),
 
       task_utils.template("STM32: generate compile_commands.json", "Generate compile_commands.json using compiledb or bear", function()

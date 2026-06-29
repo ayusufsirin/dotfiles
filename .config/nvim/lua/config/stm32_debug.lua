@@ -11,17 +11,36 @@ local executable = utils.executable
 local command_availability = utils.command_availability
 
 local BUILD_CONFIG_ORDER = { "Debug", "Release" }
-local STM32_TOOLS = { "STM32_Programmer_CLI", "openocd", "arm-none-eabi-gdb", "compiledb", "bear", "make" }
+local STM32_TOOLS = { "STM32_Programmer_CLI", "ST-LINK_gdbserver", "openocd", "arm-none-eabi-gdb", "compiledb", "bear", "make" }
+local HEADLESS_APP = "org.eclipse.cdt.managedbuilder.core.headlessbuild"
 
 local function notify(message, level)
   utils.notify(message, level, { title = "STM32 debug" })
 end
 
 local function load_local_overrides(root)
-  local candidates = {
-    join(root, ".nvim", "stm32.lua"),
-    join(root, ".stm32-nvim.lua"),
+  local trusted = false
+  local filenames = {
+    ".nvim/stm32.lua",
+    ".stm32-nvim.lua",
   }
+
+  local ok_config, appdev_config = pcall(require, "appdev.config")
+  if ok_config then
+    local project_config = appdev_config.get().project_config or {}
+    trusted = project_config.trusted_lua == true
+    filenames = project_config.filenames or filenames
+  end
+
+  if not trusted then
+    return nil
+  end
+
+  local candidates = {
+  }
+  for _, filename in ipairs(filenames) do
+    candidates[#candidates + 1] = join(root, filename)
+  end
 
   for _, path in ipairs(candidates) do
     if is_file(path) then
@@ -38,7 +57,7 @@ local function load_local_overrides(root)
       end
 
       if type(result) == "table" then
-        return result
+        return result.stm32 or result
       end
 
       notify("Local STM32 override file " .. path .. " must return a table", vim.log.levels.WARN)
@@ -60,6 +79,142 @@ local function project_overrides(project)
     openocd_target = overrides.openocd_target or project.openocd_target,
     svd_file = overrides.svd_file or project.svd_file,
   }
+end
+
+local function stm32_options()
+  local ok, appdev_config = pcall(require, "appdev.config")
+  if not ok then
+    return {}
+  end
+
+  local adapter = (appdev_config.get().adapters or {}).stm32
+  if type(adapter) == "table" then
+    return adapter
+  end
+
+  return {}
+end
+
+local function cubeclt_options()
+  local opts = stm32_options().cubeclt or {}
+  return {
+    install_dir = opts.install_dir or vim.env.STM32CUBECLT_DIR or vim.env.STM32CUBEIDE_DIR,
+    workspace_dir = opts.workspace_dir or join(vim.fn.stdpath("cache"), "appdev-stm32-workspace"),
+  }
+end
+
+local function cubeide_container_options()
+  local opts = stm32_options().cubeide_container or {}
+  return {
+    enabled = opts.enabled == true,
+    image = opts.image or "xanderhendriks/stm32cubeide:16.0",
+    command = opts.command or "stm32cubeide",
+    workspace_dir = opts.workspace_dir or "/tmp/appdev-stm32-workspace",
+    project_mount_root = opts.project_mount_root or "/workspace",
+    user = opts.user,
+  }
+end
+
+local function executable_path(path)
+  if path and path ~= "" and vim.fn.executable(path) == 1 then
+    return normalize(path)
+  end
+end
+
+local function first_executable(candidates)
+  for _, candidate in ipairs(candidates or {}) do
+    local resolved = executable_path(candidate)
+    if resolved then
+      return resolved
+    end
+  end
+end
+
+local function glob_executable(root, pattern)
+  if not root or root == "" or not is_dir(root) then
+    return nil
+  end
+
+  local matches = vim.fn.globpath(root, pattern, false, true)
+  table.sort(matches)
+  return first_executable(matches)
+end
+
+local function path_or_command(command)
+  local from_path = vim.fn.exepath(command)
+  if from_path and from_path ~= "" then
+    return normalize(from_path)
+  end
+  return executable(command) and command or nil
+end
+
+local function resolve_cubeclt()
+  local opts = cubeclt_options()
+  local root = opts.install_dir and opts.install_dir ~= "" and normalize(opts.install_dir) or nil
+  local tools = {
+    install_dir = root,
+    workspace_dir = normalize(opts.workspace_dir),
+  }
+
+  if root and is_dir(root) then
+    tools.headless = first_executable({
+      join(root, "headless-build.sh"),
+      join(root, "headless-build"),
+      join(root, "stm32cubeide"),
+      join(root, "STM32CubeIDE"),
+      join(root, "stm32cubeidec"),
+    }) or glob_executable(root, "**/headless-build.sh")
+      or glob_executable(root, "**/stm32cubeide")
+      or glob_executable(root, "**/STM32CubeIDE")
+      or glob_executable(root, "**/stm32cubeidec")
+
+    tools.gdb = glob_executable(root, "**/arm-none-eabi-gdb")
+    tools.gcc = glob_executable(root, "**/arm-none-eabi-gcc")
+    tools.openocd = glob_executable(root, "**/openocd")
+    tools.stlink_gdbserver = glob_executable(root, "**/ST-LINK_gdbserver")
+      or glob_executable(root, "**/ST-LINK_gdbserver.sh")
+    tools.programmer = glob_executable(root, "**/STM32_Programmer_CLI")
+  end
+
+  tools.gdb = tools.gdb or path_or_command("arm-none-eabi-gdb")
+  tools.gcc = tools.gcc or path_or_command("arm-none-eabi-gcc")
+  tools.openocd = tools.openocd or path_or_command("openocd")
+  tools.stlink_gdbserver = tools.stlink_gdbserver or path_or_command("ST-LINK_gdbserver")
+  tools.programmer = tools.programmer or path_or_command("STM32_Programmer_CLI")
+  tools.make = path_or_command("make")
+
+  return tools
+end
+
+local function shell_with_env(command, project)
+  local tools = resolve_cubeclt()
+  local parts = {}
+  if tools.gcc then
+    parts[#parts + 1] = vim.fn.fnamemodify(tools.gcc, ":h")
+  end
+  if tools.gdb then
+    parts[#parts + 1] = vim.fn.fnamemodify(tools.gdb, ":h")
+  end
+  if tools.openocd then
+    parts[#parts + 1] = vim.fn.fnamemodify(tools.openocd, ":h")
+  end
+  if tools.stlink_gdbserver then
+    parts[#parts + 1] = vim.fn.fnamemodify(tools.stlink_gdbserver, ":h")
+  end
+  if tools.programmer then
+    parts[#parts + 1] = vim.fn.fnamemodify(tools.programmer, ":h")
+  end
+
+  local env_prefix = ""
+  if #parts > 0 then
+    env_prefix = "PATH=" .. vim.fn.shellescape(table.concat(parts, ":") .. ":$PATH") .. " "
+  end
+
+  local cwd = project and project.root or nil
+  if cwd then
+    return "cd " .. vim.fn.shellescape(cwd) .. " && " .. env_prefix .. command
+  end
+  return env_prefix .. command
 end
 
 local function sorted_paths(paths)
@@ -98,12 +253,110 @@ local function simple_project_name(project_file)
   return vim.trim(name)
 end
 
+local function read_text(path)
+  if not is_file(path) then
+    return nil
+  end
+
+  local ok, lines = pcall(vim.fn.readfile, path)
+  if not ok then
+    return nil
+  end
+
+  return table.concat(lines, "\n")
+end
+
+local function xml_unescape(value)
+  if not value then
+    return nil
+  end
+
+  return value
+    :gsub("&quot;", '"')
+    :gsub("&apos;", "'")
+    :gsub("&lt;", "<")
+    :gsub("&gt;", ">")
+    :gsub("&amp;", "&")
+end
+
+local function xml_attr(text, name)
+  return xml_unescape(text and text:match(name .. '="([^"]*)"') or nil)
+end
+
+local function resolve_build_path(root, project_name_value, config_name, build_path)
+  if not build_path or build_path == "" then
+    return normalize(join(root, config_name))
+  end
+
+  local workspace_project = build_path:match("^%${workspace_loc:/([^}/]+)}")
+  if workspace_project and workspace_project ~= project_name_value and workspace_project ~= "${ProjName}" then
+    return normalize(join(root, config_name)),
+      "Builder path references another Eclipse project: " .. build_path
+  end
+
+  local suffix = build_path:match("^%${workspace_loc:/[^}]+}[/\\]?(.*)$")
+  if suffix and suffix ~= "" then
+    return normalize(join(root, suffix))
+  end
+
+  return normalize(join(root, config_name))
+end
+
+local function parse_cproject_configs(root, project_name_value)
+  local cproject = join(root, ".cproject")
+  local text = read_text(cproject)
+  if not text then
+    return {}
+  end
+
+  local configs = {}
+  local seen = {}
+  for block in text:gmatch("<configuration%s+.-</configuration>") do
+    local name = xml_attr(block, "name")
+    if name and not seen[name] then
+      seen[name] = true
+      local build_path = xml_attr(block:match("<builder%s+.-/>") or "", "buildPath")
+      local build_root, warning = resolve_build_path(root, project_name_value, name, build_path)
+      local makefile = join(root, name, "Makefile")
+      configs[#configs + 1] = {
+        name = name,
+        root = is_file(makefile) and normalize(join(root, name)) or build_root,
+        makefile = is_file(makefile) and normalize(makefile) or nil,
+        source = is_file(makefile) and "generated_makefile" or "managed_build",
+        cproject = normalize(cproject),
+        build_path = build_path,
+        mcu = xml_unescape(block:match('target_mcu[^>]-value="([^"]+)"')),
+        artifact_name = xml_attr(block, "artifactName"),
+        warning = warning,
+      }
+    end
+  end
+
+  table.sort(configs, function(left, right)
+    local left_order = vim.fn.index(BUILD_CONFIG_ORDER, left.name)
+    local right_order = vim.fn.index(BUILD_CONFIG_ORDER, right.name)
+    left_order = left_order >= 0 and left_order or 999
+    right_order = right_order >= 0 and right_order or 999
+    if left_order == right_order then
+      return left.name < right.name
+    end
+    return left_order < right_order
+  end)
+
+  return configs
+end
+
 local function project_name(root, ioc)
+  local eclipse_name = simple_project_name(join(root, ".project"))
+  if eclipse_name then
+    return eclipse_name
+  end
+
   if ioc then
     return vim.fn.fnamemodify(ioc, ":t:r")
   end
 
-  return simple_project_name(join(root, ".project")) or vim.fn.fnamemodify(root, ":t")
+  return vim.fn.fnamemodify(root, ":t")
 end
 
 local function marker_paths(root)
@@ -132,15 +385,25 @@ end
 
 local function discover_build_configs(root)
   local configs = {}
+  local seen = {}
 
   for _, name in ipairs(BUILD_CONFIG_ORDER) do
     local makefile = join(root, name, "Makefile")
     if is_file(makefile) then
+      seen[name] = true
       configs[#configs + 1] = {
         name = name,
         root = normalize(join(root, name)),
         makefile = normalize(makefile),
+        source = "generated_makefile",
       }
+    end
+  end
+
+  local name = project_name(root, first_ioc(root))
+  for _, config in ipairs(parse_cproject_configs(root, name)) do
+    if not seen[config.name] then
+      configs[#configs + 1] = config
     end
   end
 
@@ -171,6 +434,47 @@ local function default_config_name(configs)
   return configs and configs[1] and configs[1].name or nil
 end
 
+local function config_summary(config)
+  local source = config.source == "managed_build" and "managed" or "makefile"
+  local marker = config.makefile and config.makefile or config.root
+  return config.name .. " [" .. source .. ": " .. marker .. "]"
+end
+
+local function first_mcu(configs)
+  for _, config in ipairs(configs or {}) do
+    if config.mcu and config.mcu ~= "" then
+      return config.mcu
+    end
+  end
+end
+
+local function infer_openocd_target(mcu)
+  if not mcu then
+    return nil
+  end
+
+  local family = mcu:upper():match("^STM32([A-Z]%d)")
+  local targets = {
+    F0 = "target/stm32f0x.cfg",
+    F1 = "target/stm32f1x.cfg",
+    F2 = "target/stm32f2x.cfg",
+    F3 = "target/stm32f3x.cfg",
+    F4 = "target/stm32f4x.cfg",
+    F7 = "target/stm32f7x.cfg",
+    G0 = "target/stm32g0x.cfg",
+    G4 = "target/stm32g4x.cfg",
+    H7 = "target/stm32h7x.cfg",
+    L0 = "target/stm32l0.cfg",
+    L1 = "target/stm32l1.cfg",
+    L4 = "target/stm32l4x.cfg",
+    U5 = "target/stm32u5x.cfg",
+    WB = "target/stm32wbx.cfg",
+    WL = "target/stm32wlx.cfg",
+  }
+
+  return targets[family]
+end
+
 local function elf_label(root, path)
   local escaped_root = vim.pesc(root)
   return path:gsub("^" .. escaped_root .. "/", "")
@@ -194,7 +498,9 @@ local function project_marker(dir)
     ioc = ioc,
     project_name = project_name(root, ioc),
     markers = markers,
+    mcu = first_mcu(configs),
   }
+  project.openocd_target = infer_openocd_target(project.mcu)
 
   project.elf_candidates = M.elf_candidates(project, default_name)
   project.inspection = table.concat(M.inspect_lines(project), "\n")
@@ -278,20 +584,34 @@ function M.inspect_lines(project)
   end
 
   local config_names = vim.tbl_map(function(config)
-    return config.name
+    return config_summary(config)
   end, project.configs or {})
   local elf_paths = vim.tbl_map(function(candidate)
     return candidate.label
   end, project.elf_candidates or {})
+  local warnings = {}
+  for _, config in ipairs(project.configs or {}) do
+    if config.warning then
+      warnings[#warnings + 1] = config.name .. ": " .. config.warning
+    end
+  end
+  local tools = resolve_cubeclt()
+  local container = cubeide_container_options()
 
   return {
     "STM32CubeIDE project: " .. (project.project_name or vim.fn.fnamemodify(project.root, ":t")),
     "Root: " .. project.root,
+    "MCU: " .. (project.mcu or "unknown"),
     "Build configs: " .. (#config_names > 0 and table.concat(config_names, ", ") or "none"),
     "Default config: " .. (project.default_config or "none"),
     "Makefile: " .. (project.makefile or "none"),
     "ELF candidates: " .. (#elf_paths > 0 and table.concat(elf_paths, ", ") or "none"),
     "IOC: " .. (project.ioc or "none"),
+    "CubeCLT install: " .. (tools.install_dir or "not configured"),
+    "CubeCLT headless: " .. (tools.headless or "not found"),
+    "CubeCLT workspace: " .. (tools.workspace_dir or "not configured"),
+    "CubeIDE container: " .. (container.enabled and container.image or "disabled"),
+    "Warnings: " .. (#warnings > 0 and table.concat(warnings, "; ") or "none"),
   }
 end
 
@@ -322,6 +642,128 @@ local function make_jobs_flag()
   return '"$(nproc 2>/dev/null || echo 4)"'
 end
 
+local function cubeclt_headless_args(executable_path_value, workspace, project, config, mode)
+  local spec = project.project_name .. "/" .. config.name
+  local basename = vim.fn.fnamemodify(executable_path_value, ":t")
+  local args = {
+    executable_path_value,
+    "-data",
+    workspace,
+  }
+
+  if not basename:match("^headless%-build") then
+    vim.list_extend(args, {
+      "--launcher.suppressErrors",
+      "-nosplash",
+      "-application",
+      HEADLESS_APP,
+    })
+  end
+
+  vim.list_extend(args, {
+    "-import",
+    project.root,
+    mode,
+    spec,
+  })
+
+  return args
+end
+
+local function cubeclt_headless_command(project, config, mode)
+  local tools = resolve_cubeclt()
+  if tools.headless then
+    local workspace = tools.workspace_dir or join(vim.fn.stdpath("cache"), "appdev-stm32-workspace")
+    local args = cubeclt_headless_args(tools.headless, workspace, project, config, mode)
+    local command = "mkdir -p " .. vim.fn.shellescape(workspace) .. " && " .. shell_join(args)
+    return command, config
+  end
+
+  local container = cubeide_container_options()
+  if container.enabled then
+    local project_mount = join(container.project_mount_root, vim.fn.fnamemodify(project.root, ":t"))
+    local workspace = container.workspace_dir
+    local docker_args = {
+      "docker",
+      "run",
+      "--rm",
+      "-e",
+      "HOME=/tmp",
+    }
+
+    if container.user and container.user ~= "" then
+      vim.list_extend(docker_args, { "-u", container.user })
+    end
+
+    vim.list_extend(docker_args, {
+      "-v",
+      project.root .. ":" .. project_mount,
+      "-w",
+      container.project_mount_root,
+      container.image,
+    })
+
+    local headless_args = cubeclt_headless_args(container.command, workspace, {
+      root = project_mount,
+      project_name = project.project_name,
+    }, config, mode)
+    vim.list_extend(docker_args, headless_args)
+
+    return shell_join(docker_args), config
+  end
+
+  return nil,
+    "STM32CubeIDE headless managed builder not found. Configure adapters.stm32.cubeide_container.enabled=true with a CubeIDE Docker image, install full STM32CubeIDE/headless builder, or generate Makefile/CMake output.",
+    config
+end
+
+function M.cubeclt_tools()
+  return resolve_cubeclt()
+end
+
+function M.refresh_managed_build(project, config_name)
+  if not project then
+    return config_error(project, config_name)
+  end
+
+  local config = selected_config(project, config_name)
+  if not config then
+    return config_error(project, config_name)
+  end
+
+  local tools = resolve_cubeclt()
+  local container = cubeide_container_options()
+  if not tools.headless and not container.enabled then
+    return nil,
+      "STM32CubeIDE headless managed builder not found. Configure adapters.stm32.cubeide_container.enabled=true with a CubeIDE Docker image, install full STM32CubeIDE/headless builder, or generate Makefile/CMake output.",
+      config
+  end
+
+  if not tools.headless then
+    return cubeclt_headless_command(project, config, "-cleanBuild")
+  end
+
+  local workspace = tools.workspace_dir or join(vim.fn.stdpath("cache"), "appdev-stm32-workspace")
+  local basename = vim.fn.fnamemodify(tools.headless, ":t")
+  local args = { tools.headless }
+  if not basename:match("^headless%-build") then
+    vim.list_extend(args, {
+      "--launcher.suppressErrors",
+      "-nosplash",
+      "-application",
+      HEADLESS_APP,
+    })
+  end
+  vim.list_extend(args, {
+    "-data",
+    workspace,
+    "-import",
+    project.root,
+  })
+
+  return "mkdir -p " .. vim.fn.shellescape(workspace) .. " && " .. shell_join(args), config
+end
+
 function M.build_current_config(project, config_name)
   if not project then
     return config_error(project, config_name)
@@ -332,7 +774,11 @@ function M.build_current_config(project, config_name)
     return config_error(project, config_name)
   end
 
-  local command = "make -j" .. make_jobs_flag() .. " all -C " .. vim.fn.shellescape(config.root)
+  if not config.makefile then
+    return cubeclt_headless_command(project, config, "-build")
+  end
+
+  local command = shell_with_env("make -j" .. make_jobs_flag() .. " all -C " .. vim.fn.shellescape(config.root), project)
   return command, config
 end
 
@@ -346,7 +792,11 @@ function M.clean_current_config(project, config_name)
     return config_error(project, config_name)
   end
 
-  local command = "make clean -C " .. vim.fn.shellescape(config.root)
+  if not config.makefile then
+    return cubeclt_headless_command(project, config, "-cleanBuild")
+  end
+
+  local command = shell_with_env("make clean -C " .. vim.fn.shellescape(config.root), project)
   return command, config
 end
 
@@ -360,13 +810,19 @@ function M.generate_compile_commands(project, config_name)
     return config_error(project, config_name)
   end
 
+  if not config.makefile then
+    return nil,
+      "compile_commands.json generation requires a generated Makefile. Run STM32: build first; if CubeCLT does not generate a Makefile, use STM32CubeIDE/CubeCLT export settings or Bear against a real build.",
+      config
+  end
+
   if executable("compiledb") then
-    local command = "compiledb make -C " .. vim.fn.shellescape(config.root)
+    local command = shell_with_env("compiledb make -C " .. vim.fn.shellescape(config.root), project)
     return command, config
   end
 
   if executable("bear") then
-    local command = "bear -- make -j" .. make_jobs_flag() .. " all -C " .. vim.fn.shellescape(config.root)
+    local command = shell_with_env("bear -- make -j" .. make_jobs_flag() .. " all -C " .. vim.fn.shellescape(config.root), project)
     return command, config, "note: Bear may require a clean build"
   end
 
@@ -409,7 +865,8 @@ function M.flash_elf(project, elf_path)
     return nil, "No STM32CubeIDE project found"
   end
 
-  if not executable("STM32_Programmer_CLI") then
+  local tools = resolve_cubeclt()
+  if not tools.programmer then
     return nil,
       "STM32_Programmer_CLI is not on PATH. Install STM32CubeProgrammer (part of STM32CubeCLT) and add it to PATH.",
       project
@@ -421,7 +878,7 @@ function M.flash_elf(project, elf_path)
     return nil, reason, project
   end
 
-  local command = "STM32_Programmer_CLI -c port=SWD -w "
+  local command = vim.fn.shellescape(tools.programmer) .. " -c port=SWD -w "
     .. vim.fn.shellescape(selected)
     .. " -v -rst"
   return command, selected, project
@@ -433,18 +890,20 @@ function M.erase_chip(confirmed)
       "Chip erase requires explicit confirmation. Pass confirmed=true to build the erase command, then review before executing."
   end
 
-  if not executable("STM32_Programmer_CLI") then
+  local tools = resolve_cubeclt()
+  if not tools.programmer then
     return nil,
       "STM32_Programmer_CLI is not on PATH. Install STM32CubeProgrammer (part of STM32CubeCLT) and add it to PATH."
   end
 
-  return "STM32_Programmer_CLI -c port=SWD -e all"
+  return vim.fn.shellescape(tools.programmer) .. " -c port=SWD -e all"
 end
 
 function M.start_openocd(project, opts)
   opts = opts or {}
 
-  if not executable("openocd") then
+  local tools = resolve_cubeclt()
+  if not tools.openocd then
     return nil,
       "openocd is not on PATH. Install OpenOCD and add it to PATH for debug-server tasks.",
       "interface/stlink.cfg"
@@ -465,7 +924,7 @@ function M.start_openocd(project, opts)
     target_path = "target/" .. target_path
   end
 
-  local command = "openocd -f "
+  local command = vim.fn.shellescape(tools.openocd) .. " -f "
     .. vim.fn.shellescape(interface)
     .. " -f "
     .. vim.fn.shellescape(target_path)
@@ -489,14 +948,16 @@ function M.cortex_configurations(opts)
   end
 
   local overrides = project_overrides(project)
+  local tools = resolve_cubeclt()
+  local use_openocd = tools.openocd or not tools.stlink_gdbserver
   local interface = opts.interface or overrides.openocd_interface or "interface/stlink.cfg"
   local target = opts.target or overrides.openocd_target
-  if not target then
+  if use_openocd and not target then
     return nil, "OpenOCD target config is not set. Pass opts.target (e.g. 'stm32f4x.cfg'), set project.openocd_target, or use a local override file.", project
   end
 
   local target_path = target
-  if not target_path:match("^target/") and not target_path:match("^interface/") then
+  if target_path and not target_path:match("^target/") and not target_path:match("^interface/") then
     target_path = "target/" .. target_path
   end
 
@@ -525,14 +986,27 @@ function M.cortex_configurations(opts)
     name = "STM32 Cortex-M: " .. project.project_name,
     type = "cortex-debug",
     request = "launch",
-    servertype = "openocd",
-    serverpath = "openocd",
-    gdbPath = "arm-none-eabi-gdb",
+    gdbPath = tools.gdb or "arm-none-eabi-gdb",
     executable = elf,
     cwd = cwd,
     runToEntryPoint = "main",
-    configFiles = { interface, target_path },
   }
+
+  if tools.openocd then
+    config.servertype = "openocd"
+    config.serverpath = tools.openocd
+    config.configFiles = { interface, target_path }
+  elseif tools.stlink_gdbserver then
+    config.servertype = "stlink"
+    config.serverpath = tools.stlink_gdbserver
+    if project.mcu then
+      config.device = project.mcu
+    end
+  else
+    config.servertype = "openocd"
+    config.serverpath = "openocd"
+    config.configFiles = { interface, target_path }
+  end
 
   if svd_file and svd_file ~= "" then
     config.svdFile = normalize(svd_file)
@@ -592,10 +1066,18 @@ end
 
 local function tool_status_lines()
   local status = command_availability(STM32_TOOLS)
+  local tools = resolve_cubeclt()
   local lines = {
     "Tool availability:",
     "  Available: " .. (#status.available > 0 and table.concat(status.available, ", ") or "none"),
     "  Missing: " .. (#status.missing > 0 and table.concat(status.missing, ", ") or "none"),
+    "  Resolved CubeCLT tools:",
+    "    headless: " .. (tools.headless or "not found"),
+    "    gcc: " .. (tools.gcc or "not found"),
+    "    gdb: " .. (tools.gdb or "not found"),
+    "    openocd: " .. (tools.openocd or "not found"),
+    "    stlink_gdbserver: " .. (tools.stlink_gdbserver or "not found"),
+    "    programmer: " .. (tools.programmer or "not found"),
   }
 
   return lines, status
@@ -612,14 +1094,24 @@ end
 
 local function suggested_steps_lines(project, status)
   local steps = {}
+  local tools = resolve_cubeclt()
 
   if not project then
     steps[#steps + 1] = "Open a file inside an STM32CubeIDE project to enable STM32 commands."
     return steps
   end
 
-  steps[#steps + 1] = "Build: :lua require('config.stm32_debug').build_current_config(project)"
-  steps[#steps + 1] = "Clean: :lua require('config.stm32_debug').clean_current_config(project)"
+  steps[#steps + 1] = "Build: :AppDevBuild"
+  steps[#steps + 1] = "Clean: :AppDevAction clean"
+  if project.default_config and not project.makefile then
+    if tools.headless then
+      steps[#steps + 1] = "Managed build: no generated Makefile found; AppDev will use the configured CubeIDE headless builder."
+    elseif cubeide_container_options().enabled then
+      steps[#steps + 1] = "Managed build: no generated Makefile found; AppDev will use the configured CubeIDE Docker image."
+    else
+      steps[#steps + 1] = "Managed build: no generated Makefile found, and configured CubeCLT has no CubeIDE headless builder."
+    end
+  end
 
   if executable("compiledb") or executable("bear") then
     steps[#steps + 1] = "Generate compile_commands.json: :lua require('config.stm32_debug').generate_compile_commands(project)"
@@ -627,20 +1119,22 @@ local function suggested_steps_lines(project, status)
     steps[#steps + 1] = "Install 'compiledb' or 'bear' to generate compile_commands.json for clangd."
   end
 
-  if executable("STM32_Programmer_CLI") then
+  if tools.programmer then
     steps[#steps + 1] = "Flash: :lua require('config.stm32_debug').flash_elf(project)"
     steps[#steps + 1] = "Erase: :lua require('config.stm32_debug').erase_chip(true) -- review before executing"
   else
     steps[#steps + 1] = "Install STM32CubeProgrammer / STM32CubeCLT and add STM32_Programmer_CLI to PATH for flash/erase."
   end
 
-  if executable("openocd") then
+  if tools.openocd then
     steps[#steps + 1] = "OpenOCD server: :lua require('config.stm32_debug').start_openocd(project, {target='stm32f4x.cfg'})"
+  elseif tools.stlink_gdbserver then
+    steps[#steps + 1] = "DAP debug: CubeCLT ST-LINK GDB server is available; use :AppDevDebug after selecting/building an ELF."
   else
-    steps[#steps + 1] = "Install OpenOCD and add it to PATH for debug-server tasks."
+    steps[#steps + 1] = "Install OpenOCD or STM32CubeCLT ST-LINK GDB server for debug-server tasks."
   end
 
-  if not executable("arm-none-eabi-gdb") then
+  if not tools.gdb then
     steps[#steps + 1] = "Install arm-none-eabi-gdb (part of STM32CubeCLT or ARM GCC) for DAP debugging."
   end
 
