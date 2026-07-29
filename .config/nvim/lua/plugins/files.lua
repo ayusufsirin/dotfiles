@@ -92,14 +92,14 @@ return {
         on_attach = on_attach,
         hijack_netrw = true,
         hijack_cursor = true,
-        sync_root_with_cwd = true,
-        respect_buf_cwd = true,
+        sync_root_with_cwd = false,
+        respect_buf_cwd = false,
         update_focused_file = {
           enable = true,
-          update_root = true,
+          update_root = false,
         },
         view = {
-          width = 34,
+          width = 58,
           side = "left",
           preserve_window_proportions = true,
         },
@@ -126,7 +126,7 @@ return {
         },
         actions = {
           open_file = {
-            resize_window = true,
+            resize_window = false,
             quit_on_open = false,
             window_picker = {
               enable = true,
