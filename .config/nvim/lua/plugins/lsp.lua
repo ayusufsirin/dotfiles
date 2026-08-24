@@ -11,19 +11,16 @@ return {
       "b0o/schemastore.nvim",
     },
     config = function()
+      local offline = require("config.offline")
       local capabilities = require("cmp_nvim_lsp").default_capabilities()
       local lspconfig = require("lspconfig")
 
-      require("mason").setup({
-        ui = {
-          border = "rounded",
-        },
-      })
+      require("mason").setup(offline.mason_settings())
 
       require("fidget").setup({})
 
       local mason_registry_ok, mason_registry = pcall(require, "mason-registry")
-      local ensure_installed = {
+      local default_tools = {
         "clangd",
         "clang-format",
         "codelldb",
@@ -40,14 +37,15 @@ return {
         "stylua",
         "yaml-language-server",
       }
-      if mason_registry_ok and mason_registry.has_package("cortex-debug") then
-        table.insert(ensure_installed, 4, "cortex-debug")
+      if not offline.enabled() and mason_registry_ok and mason_registry.has_package("cortex-debug") then
+        table.insert(default_tools, 4, "cortex-debug")
       end
+      local ensure_installed = offline.ensure_installed(default_tools)
 
       require("mason-tool-installer").setup({
         ensure_installed = ensure_installed,
         auto_update = false,
-        run_on_start = true,
+        run_on_start = not offline.enabled() or offline.ready(),
       })
 
       local on_attach = function(client, bufnr)

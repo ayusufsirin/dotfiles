@@ -89,6 +89,99 @@ On first launch, Mason is configured to install these tools automatically:
 That means you do not need to install those manually in the normal case.
 The main requirement is that Python virtual environments and npm-backed installs work on the machine.
 
+## Fully offline installation
+
+Set `NVIM_OFFLINE=1` when the machine can reach internal Git mirrors and Nexus,
+but cannot reach the public internet. In this profile:
+
+- lazy.nvim plugin URLs continue to use the global Git `insteadOf` rules.
+- Tree-sitter clones parser source with Git and compiles it locally instead of
+  downloading GitHub archive tarballs.
+- Mason uses pinned package versions, Nexus npm/PyPI endpoints, and Nexus raw
+  assets. Its public metadata providers are disabled.
+
+Configure the profile before starting Neovim:
+
+```bash
+export NVIM_OFFLINE=1
+export NVIM_NEXUS_RAW_URL=https://nexus.example/repository/nvim-raw
+export NVIM_NEXUS_PYPI_URL=https://nexus.example/repository/pypi-all/simple
+export NVIM_NEXUS_NPM_URL=https://nexus.example/repository/npm-all
+```
+
+`PIP_INDEX_URL` and `NPM_CONFIG_REGISTRY` can be used instead of the last two
+Neovim-specific variables. Keep credentials and internal CA configuration in
+the standard pip/npm environment or client configuration; do not commit them.
+The raw repository is expected to allow anonymous reads.
+
+The raw repository uses this layout:
+
+```text
+github/<owner>/<repo>/releases/download/<version>/<asset>
+openvsx/marus25/cortex-debug/1.12.1/marus25.cortex-debug-1.12.1.vsix
+```
+
+For Linux x86-64, pre-populate these GitHub release paths:
+
+- `mason-org/mason-registry`, release `2026-04-06-bumpy-enemy`:
+  `registry.json.zip` and `checksums.txt`
+- `clangd/clangd`, release `22.1.0`: `clangd-linux-22.1.0.zip`
+- `vadimcn/vscode-lldb`, release `v1.12.1`: `codelldb-linux-x64.vsix`
+- `LuaLS/lua-language-server`, release `3.18.0`:
+  `lua-language-server-3.18.0-linux-x64.tar.gz`
+- `artempyanykh/marksman`, release `2026-02-08`: `marksman-linux-x64`
+- `vscode-shellcheck/shellcheck-binaries`, release `v0.11.0`:
+  `shellcheck-v0.11.0.linux.x86_64.tar.gz`
+- `mvdan/sh`, release `v3.13.0`: `shfmt_v3.13.0_linux_amd64`
+- `johnnymorganz/stylua`, release `v2.4.0`: `stylua-linux-x86_64.zip`
+
+The Nexus PyPI repository must contain `clang-format`, `debugpy`, `rstcheck`,
+and `ruff` at the pinned versions in `lua/config/offline.lua`, including their
+dependencies. The npm repository must contain `markdownlint-cli2`, `prettier`,
+`pyright`, and `yaml-language-server`, including transitive dependencies.
+
+Mirror these 21 parser repositories:
+
+```text
+tree-sitter/tree-sitter-bash
+tree-sitter/tree-sitter-c
+tree-sitter/tree-sitter-cpp
+stsewd/tree-sitter-comment
+tree-sitter/tree-sitter-css
+camdencheek/tree-sitter-dockerfile
+the-mikedavis/tree-sitter-git-config
+gbprod/tree-sitter-gitcommit
+shunsambongi/tree-sitter-gitignore
+tree-sitter/tree-sitter-go
+tree-sitter/tree-sitter-json
+MunifTanjim/tree-sitter-lua
+MDeiml/tree-sitter-markdown
+tree-sitter/tree-sitter-python
+nvim-treesitter/tree-sitter-query
+stsewd/tree-sitter-rst
+tree-sitter/tree-sitter-rust
+tree-sitter-grammars/tree-sitter-toml
+neovim/tree-sitter-vim
+neovim/tree-sitter-vimdoc
+tree-sitter-grammars/tree-sitter-yaml
+```
+
+`markdown` and `markdown_inline` share `MDeiml/tree-sitter-markdown`, giving 22
+parsers from 21 repositories. The offline machine also needs a C compiler.
+
+Before disconnecting Nexus from its upstreams, perform a clean end-to-end
+installation through the mirrors:
+
+```bash
+~/.dotfiles/scripts/nvim-offline-prime.sh
+```
+
+The script uses isolated XDG directories, so success proves the mirrors contain
+everything rather than reusing the current Neovim cache. Set
+`NVIM_OFFLINE_KEEP_TMP=1` to retain the isolated installation for inspection.
+Inside Neovim, `:NvimOfflineHealth` verifies the profile, prerequisites, pinned
+Mason receipts, and all configured parsers.
+
 ## Install
 
 Clone the dotfiles repo wherever you keep it, then link this config:

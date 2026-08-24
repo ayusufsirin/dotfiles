@@ -2,7 +2,12 @@ return {
   {
     "nvim-treesitter/nvim-treesitter",
     branch = "master",
-    build = ":TSUpdate",
+    build = function()
+      if require("config.offline").enabled() then
+        require("nvim-treesitter.install").prefer_git = true
+      end
+      vim.cmd("TSUpdate")
+    end,
     lazy = false,
     dependencies = {
       {
@@ -11,31 +16,11 @@ return {
       },
     },
     config = function()
+      if require("config.offline").enabled() then
+        require("nvim-treesitter.install").prefer_git = true
+      end
       require("nvim-treesitter.configs").setup({
-        ensure_installed = {
-          "bash",
-          "c",
-          "cpp",
-          "comment",
-          "css",
-          "dockerfile",
-          "git_config",
-          "gitcommit",
-          "gitignore",
-          "go",
-          "json",
-          "lua",
-          "markdown",
-          "markdown_inline",
-          "python",
-          "query",
-          "rst",
-          "rust",
-          "toml",
-          "vim",
-          "vimdoc",
-          "yaml",
-        },
+        ensure_installed = require("config.offline").parsers,
         highlight = { enable = true },
         indent = { enable = true },
         incremental_selection = {
