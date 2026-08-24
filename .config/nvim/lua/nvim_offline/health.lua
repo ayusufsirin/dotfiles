@@ -61,7 +61,7 @@ local function check_profile()
   ok("NVIM_OFFLINE is enabled")
   local missing = offline.missing_settings()
   if #missing == 0 then
-    ok("Nexus raw, PyPI, and npm endpoints are configured")
+    ok("Nexus GitHub release, Cortex Debug, PyPI, and npm endpoints are configured")
     ok("Mason registry is pinned to " .. offline.registry_version)
   else
     error("missing settings: " .. table.concat(missing, ", "))

@@ -18,17 +18,23 @@ assert(
 )
 assert(
   settings.github.download_url_template
-    == "http://nexus.invalid/repository/nvim-raw/github/%s/releases/download/%s/%s",
-  "GitHub releases should use Nexus raw"
+    == "http://nexus.invalid/repository/github.com/%s/releases/download/%s/%s",
+  "GitHub releases should use the Nexus GitHub proxy"
 )
 assert(settings.pip.install_args[2]:find("nexus.invalid", 1, true), "pip should use Nexus")
+assert(settings.pip.install_args[3] == "--trusted-host", "HTTP PyPI should be explicitly trusted")
+assert(settings.pip.install_args[4] == "nexus.invalid", "pip should trust only the Nexus authority")
+assert(vim.env.PIP_TRUSTED_HOST == "nexus.invalid", "pip subprocesses should trust the HTTP Nexus authority")
 assert(settings.npm.install_args[2]:find("nexus.invalid", 1, true), "npm should use Nexus")
 
 local index = require("config.mason_offline_registry")
 local cortex = require(index.cortex_debug)
 local cortex_url = cortex.source.download.files["marus25.cortex-debug-1.12.1.vsix"]
 assert(cortex.source.id == "pkg:generic/cortex-debug@1.12.1", "cortex-debug should not use Open VSX")
-assert(cortex_url:find("nexus.invalid", 1, true), "cortex-debug should use Nexus raw")
+assert(
+  cortex_url == "http://nexus.invalid/repository/marketplace/cortex-debug-1.12.1.vsix",
+  "cortex-debug should use its exact Nexus URL"
+)
 
 local install = require("nvim-treesitter.install")
 assert(install.prefer_git, "Tree-sitter should prefer Git in offline mode")

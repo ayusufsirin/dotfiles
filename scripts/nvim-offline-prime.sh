@@ -4,7 +4,18 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 config_source="$repo_root/.config/nvim"
 
-: "${NVIM_NEXUS_RAW_URL:?Set NVIM_NEXUS_RAW_URL to the Nexus raw repository base URL}"
+github_url="${NVIM_NEXUS_GITHUB_URL:-}"
+raw_url="${NVIM_NEXUS_RAW_URL:-}"
+cortex_debug_url="${NVIM_NEXUS_CORTEX_DEBUG_URL:-}"
+
+if [[ -z "$github_url" && -z "$raw_url" ]]; then
+  echo "Set NVIM_NEXUS_GITHUB_URL or legacy NVIM_NEXUS_RAW_URL" >&2
+  exit 2
+fi
+if [[ -z "$cortex_debug_url" && -z "$raw_url" ]]; then
+  echo "Set NVIM_NEXUS_CORTEX_DEBUG_URL or legacy NVIM_NEXUS_RAW_URL" >&2
+  exit 2
+fi
 
 pypi_url="${NVIM_NEXUS_PYPI_URL:-${PIP_INDEX_URL:-}}"
 npm_url="${NVIM_NEXUS_NPM_URL:-${NPM_CONFIG_REGISTRY:-}}"
@@ -18,7 +29,16 @@ if [[ -z "$npm_url" ]]; then
   exit 2
 fi
 
-prime_tmp="$(mktemp -d)"
+if [[ -n "${NVIM_OFFLINE_PRIME_ROOT:-}" ]]; then
+  prime_tmp="$NVIM_OFFLINE_PRIME_ROOT"
+  if [[ -e "$prime_tmp" ]]; then
+    echo "NVIM_OFFLINE_PRIME_ROOT already exists: $prime_tmp" >&2
+    exit 2
+  fi
+  mkdir -p "$prime_tmp"
+else
+  prime_tmp="$(mktemp -d)"
+fi
 cleanup() {
   if [[ "${NVIM_OFFLINE_KEEP_TMP:-0}" == "1" ]]; then
     echo "Kept isolated Neovim directory: $prime_tmp"
@@ -32,6 +52,7 @@ mkdir -p "$prime_tmp/config" "$prime_tmp/data" "$prime_tmp/state" "$prime_tmp/ca
 ln -s "$config_source" "$prime_tmp/config/nvim"
 
 export NVIM_OFFLINE=1
+export NVIM_OFFLINE_PRIME=1
 export NVIM_NEXUS_PYPI_URL="$pypi_url"
 export NVIM_NEXUS_NPM_URL="$npm_url"
 export XDG_CONFIG_HOME="$prime_tmp/config"
@@ -46,9 +67,12 @@ echo "Installing pinned Mason tools through Nexus..."
 nvim --headless "+Lazy load nvim-lspconfig" "+MasonToolsInstallSync" +qa
 
 echo "Cloning and compiling Tree-sitter parsers through the Git mirror..."
-nvim --headless "+TSUpdateSync" +qa
+nvim --headless "+lua vim.cmd('TSInstallSync! ' .. table.concat(require('config.offline').parsers, ' '))" +qa
 
 echo "Running offline health checks..."
 nvim --headless "+checkhealth nvim_offline" +qa
+
+echo "Verifying pinned tools and parsers..."
+nvim --headless "+luafile $config_source/tests/offline_install_verify.lua" +qa
 
 echo "Offline bootstrap completed successfully. Nexus and Git mirrors contain the required content."

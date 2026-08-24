@@ -82,7 +82,7 @@ local function trim_trailing_slash(value)
   if not value or value == "" then
     return nil
   end
-  return value:gsub("/+$", "")
+  return (value:gsub("/+$", ""))
 end
 
 function M.enabled()
@@ -93,8 +93,17 @@ function M.raw_url()
   return trim_trailing_slash(vim.env.NVIM_NEXUS_RAW_URL)
 end
 
+function M.github_url()
+  return trim_trailing_slash(vim.env.NVIM_NEXUS_GITHUB_URL)
+end
+
 function M.pypi_url()
   return trim_trailing_slash(vim.env.NVIM_NEXUS_PYPI_URL or vim.env.PIP_INDEX_URL)
+end
+
+function M.pypi_trusted_host()
+  local url = M.pypi_url()
+  return url and url:match("^http://([^/:]+)") or nil
 end
 
 function M.npm_url()
@@ -107,8 +116,11 @@ function M.missing_settings()
   end
 
   local missing = {}
-  if not M.raw_url() then
-    table.insert(missing, "NVIM_NEXUS_RAW_URL")
+  if not M.github_url() and not M.raw_url() then
+    table.insert(missing, "NVIM_NEXUS_GITHUB_URL or NVIM_NEXUS_RAW_URL")
+  end
+  if not trim_trailing_slash(vim.env.NVIM_NEXUS_CORTEX_DEBUG_URL) and not M.raw_url() then
+    table.insert(missing, "NVIM_NEXUS_CORTEX_DEBUG_URL or NVIM_NEXUS_RAW_URL")
   end
   if not M.pypi_url() then
     table.insert(missing, "NVIM_NEXUS_PYPI_URL or PIP_INDEX_URL")
@@ -131,18 +143,34 @@ function M.apply_client_environment()
   if M.pypi_url() then
     vim.env.PIP_INDEX_URL = M.pypi_url()
   end
+  local trusted_host = M.pypi_trusted_host()
+  if trusted_host and not (vim.env.PIP_TRUSTED_HOST or ""):find(trusted_host, 1, true) then
+    vim.env.PIP_TRUSTED_HOST = vim.env.PIP_TRUSTED_HOST and (vim.env.PIP_TRUSTED_HOST .. " " .. trusted_host)
+      or trusted_host
+  end
   if M.npm_url() then
     vim.env.NPM_CONFIG_REGISTRY = M.npm_url()
   end
 end
 
 function M.github_download_template()
-  return M.raw_url() .. "/github/%s/releases/download/%s/%s"
+  if M.github_url() then
+    return M.github_url() .. "/%s/releases/download/%s/%s"
+  end
+  if M.raw_url() then
+    return M.raw_url() .. "/github/%s/releases/download/%s/%s"
+  end
 end
 
 function M.cortex_debug_url()
-  return M.raw_url()
-    .. "/openvsx/marus25/cortex-debug/1.12.1/marus25.cortex-debug-1.12.1.vsix"
+  local exact_url = trim_trailing_slash(vim.env.NVIM_NEXUS_CORTEX_DEBUG_URL)
+  if exact_url then
+    return exact_url
+  end
+  if M.raw_url() then
+    return M.raw_url()
+      .. "/openvsx/marus25/cortex-debug/1.12.1/marus25.cortex-debug-1.12.1.vsix"
+  end
 end
 
 function M.mason_settings()
@@ -172,10 +200,13 @@ function M.mason_settings()
   settings.github = {
     download_url_template = M.github_download_template(),
   }
-  settings.pip = {
-    upgrade_pip = false,
-    install_args = { "--index-url", M.pypi_url() },
-  }
+  local pip_args = { "--index-url", M.pypi_url() }
+  local trusted_host = M.pypi_trusted_host()
+  if trusted_host then
+    table.insert(pip_args, "--trusted-host")
+    table.insert(pip_args, trusted_host)
+  end
+  settings.pip = { upgrade_pip = false, install_args = pip_args }
   settings.npm = {
     install_args = { "--registry", M.npm_url() },
   }

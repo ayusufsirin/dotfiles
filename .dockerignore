@@ -1,0 +1,10 @@
+*
+!.config/
+!.config/nvim/
+!.config/nvim/**
+!scripts/
+!scripts/nvim-offline-prime.sh
+!tests/
+!tests/docker/
+!tests/docker/nvim-offline/
+!tests/docker/nvim-offline/**

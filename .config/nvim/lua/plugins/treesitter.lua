@@ -2,12 +2,6 @@ return {
   {
     "nvim-treesitter/nvim-treesitter",
     branch = "master",
-    build = function()
-      if require("config.offline").enabled() then
-        require("nvim-treesitter.install").prefer_git = true
-      end
-      vim.cmd("TSUpdate")
-    end,
     lazy = false,
     dependencies = {
       {
@@ -16,11 +10,16 @@ return {
       },
     },
     config = function()
-      if require("config.offline").enabled() then
+      local offline = require("config.offline")
+      if offline.enabled() then
         require("nvim-treesitter.install").prefer_git = true
       end
+      local ensure_installed = offline.parsers
+      if vim.env.NVIM_OFFLINE_PRIME == "1" then
+        ensure_installed = {}
+      end
       require("nvim-treesitter.configs").setup({
-        ensure_installed = require("config.offline").parsers,
+        ensure_installed = ensure_installed,
         highlight = { enable = true },
         indent = { enable = true },
         incremental_selection = {
