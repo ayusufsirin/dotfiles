@@ -2,6 +2,12 @@ local offline = require("config.offline")
 
 assert(offline.enabled(), "offline profile should be enabled")
 assert(offline.ready(), "offline profile should have all Nexus endpoints")
+assert(offline.git_mirror_url(), "offline profile should configure a Git mirror")
+assert(
+  offline.git_repository_url("tree-sitter/tree-sitter-c")
+    == "https://gitlab.invalid/mirror/github.com/tree-sitter/tree-sitter-c.git",
+  "Git repository URLs should use the mirror and end in .git"
+)
 assert(#offline.tools == 16, "offline Mason manifest should contain 16 tools")
 for _, tool in ipairs(offline.tools) do
   assert(tool.version and tool.force, "offline Mason tools should use trusted pinned versions")
@@ -17,9 +23,8 @@ assert(
   "Mason registry should be pinned"
 )
 assert(
-  settings.github.download_url_template
-    == "http://nexus.invalid/repository/github.com/%s/releases/download/%s/%s",
-  "GitHub releases should use the Nexus GitHub proxy"
+  settings.github.download_url_template == "http://nexus.invalid/repository/github.com/%s/releases/download/%s/%s",
+  "GitHub release assets should use the configured HTTP artifact proxy"
 )
 assert(settings.pip.install_args[2]:find("nexus.invalid", 1, true), "pip should use Nexus")
 assert(settings.pip.install_args[3] == "--trusted-host", "HTTP PyPI should be explicitly trusted")
@@ -38,5 +43,11 @@ assert(
 
 local install = require("nvim-treesitter.install")
 assert(install.prefer_git, "Tree-sitter should prefer Git in offline mode")
+local parser_urls = offline.normalize_treesitter_git_urls()
+assert(#parser_urls == 21, "Tree-sitter should use 21 unique parser repositories")
+for _, parser_url in ipairs(parser_urls) do
+  assert(parser_url:find(offline.git_mirror_url(), 1, true) == 1, "Tree-sitter should use the Git mirror")
+  assert(parser_url:match("%.git$"), "Tree-sitter clone URLs should end in .git")
+end
 
 print("offline smoke tests passed")

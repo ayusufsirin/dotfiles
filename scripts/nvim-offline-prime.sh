@@ -3,13 +3,25 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 config_source="$repo_root/.config/nvim"
+# shellcheck source=scripts/lib/nvim-offline-profile.sh
+source "$repo_root/scripts/lib/nvim-offline-profile.sh"
 
-github_url="${NVIM_NEXUS_GITHUB_URL:-}"
+profile_file="${NVIM_OFFLINE_PROFILE:-$HOME/.config/nvim-offline/env}"
+if [[ -r "$profile_file" ]]; then
+  nvim_offline_load_profile "$profile_file"
+elif [[ -n "${NVIM_OFFLINE_PROFILE:-}" ]]; then
+  echo "Offline profile is missing or unreadable: $profile_file" >&2
+  exit 2
+fi
+nvim_offline_apply_defaults
+nvim_offline_apply_git_environment
+
+github_release_url="${NVIM_GITHUB_RELEASE_BASE_URL:-${NVIM_NEXUS_GITHUB_URL:-}}"
 raw_url="${NVIM_NEXUS_RAW_URL:-}"
 cortex_debug_url="${NVIM_NEXUS_CORTEX_DEBUG_URL:-}"
 
-if [[ -z "$github_url" && -z "$raw_url" ]]; then
-  echo "Set NVIM_NEXUS_GITHUB_URL or legacy NVIM_NEXUS_RAW_URL" >&2
+if [[ -z "$github_release_url" && -z "$raw_url" ]]; then
+  echo "Set NVIM_GITHUB_RELEASE_BASE_URL or legacy NVIM_NEXUS_RAW_URL" >&2
   exit 2
 fi
 if [[ -z "$cortex_debug_url" && -z "$raw_url" ]]; then
@@ -53,6 +65,7 @@ ln -s "$config_source" "$prime_tmp/config/nvim"
 
 export NVIM_OFFLINE=1
 export NVIM_OFFLINE_PRIME=1
+export NVIM_GITHUB_RELEASE_BASE_URL="$github_release_url"
 export NVIM_NEXUS_PYPI_URL="$pypi_url"
 export NVIM_NEXUS_NPM_URL="$npm_url"
 export XDG_CONFIG_HOME="$prime_tmp/config"

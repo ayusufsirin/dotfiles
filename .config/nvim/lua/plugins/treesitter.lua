@@ -13,6 +13,7 @@ return {
       local offline = require("config.offline")
       if offline.enabled() then
         require("nvim-treesitter.install").prefer_git = true
+        offline.normalize_treesitter_git_urls()
       end
       local ensure_installed = offline.parsers
       if vim.env.NVIM_OFFLINE_PRIME == "1" then

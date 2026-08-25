@@ -86,13 +86,16 @@ RUN useradd --create-home --shell /bin/bash nvimtest
 
 COPY --chown=nvimtest:nvimtest .config/nvim /home/nvimtest/.dotfiles/.config/nvim
 COPY --chown=nvimtest:nvimtest scripts/nvim-offline-prime.sh /home/nvimtest/.dotfiles/scripts/nvim-offline-prime.sh
+COPY --chown=nvimtest:nvimtest scripts/lib/nvim-offline-profile.sh /home/nvimtest/.dotfiles/scripts/lib/nvim-offline-profile.sh
 
 USER nvimtest
 WORKDIR /home/nvimtest/.dotfiles
 
 ENV HOME=/home/nvimtest \
     NVIM_OFFLINE=1 \
-    NVIM_NEXUS_GITHUB_URL=${NEXUS_URL}/repository/github.com \
+    NVIM_NEXUS_URL=${NEXUS_URL} \
+    NVIM_GITHUB_GIT_MIRROR_BASE=${GITHUB_MIRROR_BASE} \
+    NVIM_GITHUB_RELEASE_BASE_URL=${NEXUS_URL}/repository/github.com \
     NVIM_NEXUS_CORTEX_DEBUG_URL=${NEXUS_URL}/repository/marketplace.visualstudio.com/_apis/public/gallery/publishers/marus25/vsextensions/cortex-debug/1.12.1/vspackage \
     NVIM_NEXUS_PYPI_URL=${NEXUS_URL}/repository/pypi/simple \
     NVIM_NEXUS_NPM_URL=${NEXUS_URL}/repository/npm \
@@ -112,8 +115,12 @@ RUN --mount=type=secret,id=gitlab_token,required=false \
       export GIT_CONFIG_KEY_1="http.https://${mirror_host}/.extraHeader"; \
       export GIT_CONFIG_VALUE_1="Authorization: Basic ${basic_auth}"; \
     fi; \
-    resolved=$(git ls-remote --get-url https://github.com/nvim-lua/plenary.nvim.git); \
-    case "$resolved" in "$GITHUB_MIRROR_BASE"*) ;; *) echo "GitHub mirror rewrite failed" >&2; exit 1 ;; esac; \
+    for source_url in \
+      https://github.com/nvim-lua/plenary.nvim.git \
+      https://github.com/tree-sitter/tree-sitter-c.git; do \
+      resolved=$(git ls-remote --get-url "$source_url"); \
+      case "$resolved" in "$GITHUB_MIRROR_BASE"*.git) ;; *) echo "GitHub Git clone mirror rewrite failed: $resolved" >&2; exit 1 ;; esac; \
+    done; \
     ./scripts/nvim-offline-prime.sh
 
 RUN test "$(nvim --version | head -1)" = "NVIM v${NEOVIM_VERSION}"; \

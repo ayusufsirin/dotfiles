@@ -61,7 +61,7 @@ local function check_profile()
   ok("NVIM_OFFLINE is enabled")
   local missing = offline.missing_settings()
   if #missing == 0 then
-    ok("Nexus GitHub release, Cortex Debug, PyPI, and npm endpoints are configured")
+    ok("GitHub release artifact, Cortex Debug, PyPI, and npm endpoints are configured")
     ok("Mason registry is pinned to " .. offline.registry_version)
   else
     error("missing settings: " .. table.concat(missing, ", "))
@@ -74,11 +74,16 @@ local function check_profile()
     error("unsupported platform: " .. uname.sysname .. " " .. uname.machine)
   end
 
-  local rewrites = vim.fn.systemlist({ "git", "config", "--global", "--get-regexp", "^url\\..*\\.insteadof$" })
-  if vim.v.shell_error == 0 and table.concat(rewrites, "\n"):find("github.com", 1, true) then
-    ok("global Git configuration rewrites GitHub URLs")
+  local parser_url = offline.git_repository_url("tree-sitter/tree-sitter-c")
+  local resolved_url = offline.git_mirror_url() and parser_url or offline.resolved_git_url(parser_url)
+  if
+    resolved_url
+    and resolved_url ~= "https://github.com/tree-sitter/tree-sitter-c.git"
+    and resolved_url:match("%.git$")
+  then
+    ok("Git clones use suffixed URLs under the configured mirror")
   else
-    error("global Git configuration does not rewrite GitHub URLs to the mirror")
+    error("Git clone routing is not using a suffixed mirror URL")
   end
 end
 
