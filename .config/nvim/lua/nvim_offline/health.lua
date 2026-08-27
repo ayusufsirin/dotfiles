@@ -75,15 +75,10 @@ local function check_profile()
   end
 
   local parser_url = offline.git_repository_url("tree-sitter/tree-sitter-c")
-  local resolved_url = offline.git_mirror_url() and parser_url or offline.resolved_git_url(parser_url)
-  if
-    resolved_url
-    and resolved_url ~= "https://github.com/tree-sitter/tree-sitter-c.git"
-    and resolved_url:match("%.git$")
-  then
-    ok("Git clones use suffixed URLs under the configured mirror")
+  if parser_url == "https://github.com/tree-sitter/tree-sitter-c.git" then
+    ok("Git clones use canonical URLs with the required .git suffix")
   else
-    error("Git clone routing is not using a suffixed mirror URL")
+    error("Git clone URLs are not canonical or are missing the .git suffix")
   end
 end
 

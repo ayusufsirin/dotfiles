@@ -3,8 +3,6 @@ local M = {}
 local profile_keys = {
   NVIM_OFFLINE = true,
   NVIM_NEXUS_URL = true,
-  NVIM_GITHUB_GIT_MIRROR_BASE = true,
-  NVIM_GITLAB_CA_FILE = true,
   NVIM_GITHUB_RELEASE_BASE_URL = true,
   NVIM_NEXUS_GITHUB_URL = true,
   NVIM_NEXUS_CORTEX_DEBUG_URL = true,
@@ -168,23 +166,12 @@ function M.github_url()
     or nexus_repository("/repository/github.com")
 end
 
-function M.git_mirror_url()
-  local mirror_url = trim_trailing_slash(vim.env.NVIM_GITHUB_GIT_MIRROR_BASE)
-  return mirror_url and (mirror_url .. "/") or nil
-end
-
 function M.git_repository_url(repository)
   local path = repository:gsub("^https://github%.com/", "")
   if not path:match("%.git$") then
     path = path .. ".git"
   end
-  local mirror_url = M.enabled() and M.git_mirror_url() or nil
-  return (mirror_url or "https://github.com/") .. path
-end
-
-function M.git_url_format()
-  local mirror_url = M.enabled() and M.git_mirror_url() or nil
-  return mirror_url and (mirror_url .. "%s.git") or nil
+  return "https://github.com/" .. path
 end
 
 function M.pypi_url()
@@ -202,27 +189,6 @@ function M.npm_url()
     or nexus_repository("/repository/npm")
 end
 
-function M.resolved_git_url(source_url)
-  local resolved = vim.fn.systemlist({ "git", "ls-remote", "--get-url", source_url })
-  if vim.v.shell_error ~= 0 then
-    return nil
-  end
-  return resolved[1]
-end
-
-function M.git_routing_ready()
-  if M.git_mirror_url() then
-    local expected = M.git_mirror_url() .. "tree-sitter/tree-sitter-c.git"
-    return M.git_repository_url("tree-sitter/tree-sitter-c") == expected
-  end
-  local source_url = "https://github.com/tree-sitter/tree-sitter-c.git"
-  local resolved = M.resolved_git_url(source_url)
-  if not resolved or resolved == source_url or not resolved:match("%.git$") then
-    return false
-  end
-  return true
-end
-
 function M.missing_settings()
   if not M.enabled() then
     return {}
@@ -231,9 +197,6 @@ function M.missing_settings()
   local missing = {}
   if M.profile_error then
     table.insert(missing, M.profile_error)
-  end
-  if not M.git_routing_ready() then
-    table.insert(missing, "NVIM_GITHUB_GIT_MIRROR_BASE or a working GitHub insteadOf rule")
   end
   if not M.github_url() and not M.raw_url() then
     table.insert(missing, "NVIM_NEXUS_URL, NVIM_GITHUB_RELEASE_BASE_URL, or NVIM_NEXUS_RAW_URL")
@@ -272,40 +235,6 @@ function M.apply_client_environment()
   end
 end
 
-local function append_git_config(key, value)
-  local count = tonumber(vim.env.GIT_CONFIG_COUNT or "0")
-  if not count then
-    M.profile_error = "GIT_CONFIG_COUNT must be numeric"
-    return
-  end
-  for index = 0, count - 1 do
-    if vim.env["GIT_CONFIG_KEY_" .. index] == key then
-      return
-    end
-  end
-  vim.env["GIT_CONFIG_KEY_" .. count] = key
-  vim.env["GIT_CONFIG_VALUE_" .. count] = value
-  vim.env.GIT_CONFIG_COUNT = tostring(count + 1)
-end
-
-function M.apply_git_environment()
-  if not M.enabled() then
-    return
-  end
-  local mirror_url = M.git_mirror_url()
-  if mirror_url then
-    append_git_config("url." .. mirror_url .. ".insteadOf", "https://github.com/")
-  end
-  local ca_file = vim.env.NVIM_GITLAB_CA_FILE
-  if ca_file and ca_file ~= "" and not vim.env.GIT_SSL_CAINFO then
-    if vim.fn.filereadable(ca_file) == 1 then
-      vim.env.GIT_SSL_CAINFO = ca_file
-    else
-      M.profile_error = "internal Git CA file is unreadable: " .. ca_file
-    end
-  end
-end
-
 function M.github_download_template()
   if M.github_url() then
     return M.github_url() .. "/%s/releases/download/%s/%s"
@@ -338,9 +267,6 @@ function M.normalize_treesitter_git_urls()
     if url then
       if url:find("https://github.com/", 1, true) == 1 then
         url = M.git_repository_url(url)
-        install_info.url = url
-      elseif M.git_mirror_url() and url:find(M.git_mirror_url(), 1, true) == 1 and not url:match("%.git$") then
-        url = url .. ".git"
         install_info.url = url
       end
       if url:match("%.git$") then
@@ -400,7 +326,6 @@ end
 
 function M.setup()
   M.load_profile()
-  M.apply_git_environment()
   M.apply_client_environment()
 
   vim.api.nvim_create_user_command("NvimOfflineHealth", function()

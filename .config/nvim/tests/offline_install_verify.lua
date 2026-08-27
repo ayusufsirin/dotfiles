@@ -17,11 +17,7 @@ local parser_urls = offline.normalize_treesitter_git_urls()
 check(#parser_urls == 21, "Tree-sitter uses 21 unique repository URLs")
 for _, parser_url in ipairs(parser_urls) do
   check(parser_url:match("%.git$") ~= nil, parser_url .. " ends in .git")
-  local mirror_url = offline.git_mirror_url()
-  local resolved_url = mirror_url and parser_url or offline.resolved_git_url(parser_url)
-  local uses_mirror = mirror_url and parser_url:find(mirror_url, 1, true) == 1
-    or resolved_url ~= nil and resolved_url ~= parser_url
-  check(uses_mirror, parser_url .. " uses the Git mirror")
+  check(parser_url:find("https://github.com/", 1, true) == 1, parser_url .. " is canonical")
 end
 
 for _, command in ipairs({ "git", "curl", "tar", "unzip", "python3", "node", "npm" }) do

@@ -91,22 +91,24 @@ The main requirement is that Python virtual environments and npm-backed installs
 
 ## Fully offline installation
 
-Set `NVIM_OFFLINE=1` when the machine can reach internal Git mirrors and Nexus,
-but cannot reach the public internet. In this profile:
+Set `NVIM_OFFLINE=1` when the machine's existing Git configuration can clone
+the required repositories and the machine can reach Nexus, but it cannot reach
+the public internet. In this profile:
 
-- Lazy plugin URLs are generated directly under the configured Git mirror.
-- Tree-sitter clones 21 parser repositories from the same mirror with an
-  explicit `.git` suffix,
+- Lazy uses canonical `https://github.com/<owner>/<repo>.git` URLs. Git applies
+  the machine's existing routing and authentication configuration.
+- Tree-sitter clones 21 parser repositories with an explicit `.git` suffix,
   checks out the revisions pinned by nvim-treesitter, and compiles 22 local
   parser `.so` files with the system C compiler. It does not use GitHub archive
   downloads.
 - Mason uses pinned package versions, Nexus npm/PyPI endpoints, and HTTP release
   assets proxied by Nexus. Its public metadata providers are disabled.
 
-Git and HTTP downloads are separate paths. No Git clone uses Nexus. Plugin and
-Tree-sitter repository clones go directly to the Git mirror. Nexus is used only
-for package registries and downloadable artifacts such as GitHub Release files.
-Mason's pinned registry is one of those release downloads, not a Git clone.
+Git and HTTP downloads are separate paths. No Git clone uses Nexus. This
+repository does not define or change Git routing, authentication, or transport
+settings. Nexus is used only for package registries and downloadable artifacts
+such as GitHub Release files. Mason's pinned registry is one of those release
+downloads, not a Git clone.
 
 ### Automated target-machine setup
 
@@ -124,46 +126,46 @@ The minimum profile contains:
 ```text
 NVIM_OFFLINE=1
 NVIM_NEXUS_URL=http://nexus.company.example:8081
-NVIM_GITHUB_GIT_MIRROR_BASE=https://gitlab.company.example/mirror/github.com/
-NVIM_GITLAB_CA_FILE=/usr/local/share/ca-certificates/company-internal-ca.crt
 ```
 
 The Nexus release, Cortex-Debug, PyPI, and npm URLs are derived from the Nexus
 base. The longer endpoint variables shown in the template remain available as
 overrides. Exported process variables take precedence over profile values.
 
-Configure a credential helper outside this repository, then run:
+Confirm that a canonical suffixed URL already clones successfully with the
+machine's Git configuration, then run:
+
+```bash
+git ls-remote --exit-code https://github.com/tree-sitter/tree-sitter-c.git HEAD
+```
+
+Then start the setup:
 
 ```bash
 ./scripts/setup-nvim-offline.sh
 ```
 
 The command validates prerequisites without running sudo, generates the Git
-repository manifest from the actual plugin specs, verifies every repository via
-the mirror, checks Nexus, safely creates the Neovim config symlink, performs an
-isolated installation, and verifies every pinned tool and parser. It stops
-rather than replacing an unrelated existing `~/.config/nvim`.
+repository manifest from the actual plugin specs, verifies every canonical URL
+using the existing Git configuration, checks Nexus, safely creates the Neovim
+config symlink, performs an isolated installation, and verifies every pinned
+tool and parser. It stops rather than replacing an unrelated existing
+`~/.config/nvim`.
 
-Use `./scripts/setup-nvim-offline.sh --preflight-only` to warm and verify the
-mirrors without installing Neovim data. Normal `nvim` launches automatically
-read `~/.config/nvim-offline/env`; shell exports and global Git URL rewrites are
-not required. A custom profile can be tested with `--profile FILE`, but normal
-launches then also require `NVIM_OFFLINE_PROFILE=FILE`.
+Use `./scripts/setup-nvim-offline.sh --preflight-only` to verify Git and Nexus
+without installing Neovim data. Normal `nvim` launches automatically read
+`~/.config/nvim-offline/env`. A custom profile can be tested with `--profile
+FILE`, but normal launches then also require `NVIM_OFFLINE_PROFILE=FILE`.
 
 The setup requires Neovim 0.10+, Git, curl, tar, gzip, unzip, ripgrep, fd,
 Python with venv support, Node/npm, and a C compiler. On Debian/Ubuntu the
 corresponding packages are `neovim git curl tar gzip unzip ripgrep fd-find
 python3 python3-venv nodejs npm build-essential`.
 
-Do not put a personal access token in the profile, repository, Git URL, or
-Docker build argument. Authentication comes from the target user's existing
-credential helper. `NVIM_GITLAB_CA_FILE` can point Git child processes at the
-internal CA without changing the system trust store.
-
-Git's `insteadOf` feature rewrites only a prefix; it cannot append `.git`.
-Therefore the setup generates every Lazy and Tree-sitter clone URL with the
-suffix before contacting the mirror. Existing global rewrites remain supported
-as a compatibility fallback when no mirror base is present in the profile.
+Git authentication and routing remain entirely outside this repository. The
+setup does not read tokens, inspect authentication methods, or run `git config`.
+It generates every Lazy and Tree-sitter clone URL with the `.git` suffix before
+passing that canonical URL to Git.
 
 `NVIM_NEXUS_GITHUB_URL` remains accepted as a compatibility alias for
 `NVIM_GITHUB_RELEASE_BASE_URL`.
@@ -189,7 +191,8 @@ and `ruff` at the pinned versions in `lua/config/offline.lua`, including their
 dependencies. The npm repository must contain `markdownlint-cli2`, `prettier`,
 `pyright`, and `yaml-language-server`, including transitive dependencies.
 
-Mirror these 21 parser repositories:
+Make these 21 parser repositories reachable through the machine's existing Git
+configuration:
 
 ```text
 tree-sitter/tree-sitter-bash
@@ -219,16 +222,16 @@ tree-sitter-grammars/tree-sitter-yaml
 parsers from 21 repositories. The offline machine also needs a C compiler.
 
 Before disconnecting Nexus from its upstreams, perform the automated preflight
-and a clean end-to-end installation through the mirrors:
+and a clean end-to-end installation:
 
 ```bash
 ~/.dotfiles/scripts/setup-nvim-offline.sh --preflight-only
 ~/.dotfiles/scripts/setup-nvim-offline.sh
 ```
 
-The prime phase uses isolated XDG directories, so success proves the mirrors contain
-everything rather than reusing the current Neovim cache. It fails unless every
-pinned Mason receipt and every compiled parser exists. Set
+The prime phase uses isolated XDG directories, so success proves all required
+content is reachable rather than reusing the current Neovim cache. It fails
+unless every pinned Mason receipt and every compiled parser exists. Set
 `NVIM_OFFLINE_KEEP_TMP=1` to retain the isolated installation for inspection,
 or set `NVIM_OFFLINE_PRIME_ROOT` to choose a new empty directory. Inside
 Neovim, `:NvimOfflineHealth` verifies the profile, prerequisites, pinned Mason
@@ -241,67 +244,54 @@ a zero-cache install on both Debian 12 and Ubuntu 22.04:
 
 ```bash
 cp .env.example .env
-# Edit .env for the internal Nexus and Git mirror.
+# Edit .env for Nexus and the external Git-config file.
 ./scripts/test-nvim-offline-docker.sh
 ```
 
 The runner automatically loads the repository-root `.env`; explicitly exported
 variables take precedence. Set `NVIM_TEST_ENV_FILE` to use another file. The
 local `.env` is ignored by Git, while `.env.example` is safe to commit. The
-runner reads the configured internal CA when present and securely prompts for a
-GitLab read token. The token is passed as a BuildKit secret, is not copied into
-an image layer, and is checked against the resulting image history and
-environment.
-
-For a non-interactive run, put only the token in a mode-0600 file outside the
-repository:
-
-```bash
-NVIM_TEST_GITLAB_TOKEN_FILE=/secure/path/gitlab-mirror-token \
-  ./scripts/test-nvim-offline-docker.sh
-```
+runner mounts the selected, self-contained Git config only for the installation
+step as a BuildKit secret. The file is absent from the resulting image. Any Git
+routing and authentication required by the build must already be present in
+that external file.
 
 Useful runner overrides are:
 
 ```text
-NVIM_NEXUS_URL                   canonical Nexus base URL
-NVIM_GITHUB_GIT_MIRROR_BASE      canonical Git clone prefix
-NVIM_GITLAB_CA_FILE              canonical internal CA file
-NVIM_TEST_NEXUS_URL              alternate Nexus base URL
-NVIM_TEST_GITHUB_MIRROR_BASE     alternate Git clone prefix
-NVIM_TEST_GITLAB_CA_FILE         alternate internal CA file
-NVIM_TEST_DOCKER_NETWORK         Docker build network (for example, host)
-NVIM_TEST_PULL_BASES=0           use already-present base images
-NVIM_TEST_DEBIAN_IMAGE           alternate Debian 12 base image reference
-NVIM_TEST_UBUNTU_IMAGE           alternate Ubuntu 22.04 base image reference
-NVIM_TEST_ENV_FILE               alternate shell-format environment file
+NVIM_NEXUS_URL                 canonical Nexus base URL
+NVIM_TEST_NEXUS_URL            alternate Nexus base URL
+NVIM_TEST_GIT_CONFIG_FILE      self-contained Git config passed as a secret
+NVIM_TEST_INTERNAL_CA_FILE     optional internal CA passed as a secret
+NVIM_TEST_DOCKER_NETWORK       Docker build network (for example, host)
+NVIM_TEST_PULL_BASES=0         use already-present base images
+NVIM_TEST_DEBIAN_IMAGE         alternate Debian 12 base image reference
+NVIM_TEST_UBUNTU_IMAGE         alternate Ubuntu 22.04 base image reference
+NVIM_TEST_ENV_FILE             alternate shell-format environment file
 ```
 
-For example, use the local Git cache service without a token:
+For example, use the host's self-contained Git config and local network:
 
 ```bash
-NVIM_TEST_GITHUB_MIRROR_BASE=http://localhost:8080/github.com/ \
+NVIM_TEST_GIT_CONFIG_FILE="$HOME/.gitconfig" \
 NVIM_TEST_DOCKER_NETWORK=host \
 NVIM_TEST_PULL_BASES=0 \
   ./scripts/test-nvim-offline-docker.sh
 ```
 
-The Git mirror setting controls every GitHub clone; neither
-`NVIM_TEST_NEXUS_URL` nor `NVIM_NEXUS_URL` participates in Git routing. The
-base images themselves must already
-be local or available through the Docker daemon's configured registry mirror.
-Set the two image overrides when your Nexus Docker connector exposes different
-image names. All APT packages,
-Node, Neovim, Mason artifacts, npm/PyPI packages, Cortex-Debug, plugins, and
-Tree-sitter source fetched during the build use Nexus or the Git mirror.
+Neither `NVIM_TEST_NEXUS_URL` nor `NVIM_NEXUS_URL` participates in Git routing.
+The base images themselves must already be local or available through the
+Docker daemon's configured registry. Set the two image overrides when the
+internal Docker registry exposes different image names. APT packages, Node,
+Neovim, Mason artifacts, npm/PyPI packages, and Cortex-Debug use Nexus. Plugins
+and Tree-sitter source use canonical GitHub URLs handled by the supplied Git
+config.
 
 The Dockerfile is at `tests/docker/nvim-offline/Dockerfile`. Its final verifier
 expects Neovim 0.12.3, Node 22.23.2, 16 pinned Mason tools, and 22 parsers.
 
-To build only Debian directly, use the same values as `.env` as build arguments
-and pass credentials as BuildKit secrets. Configure the token-file variable in
-`.env` or set it after sourcing the file; omit that secret option when the
-mirror permits anonymous reads:
+To build only Debian directly, use the same Nexus values as `.env` and pass the
+external Git config as a BuildKit secret:
 
 ```bash
 set -a
@@ -316,9 +306,7 @@ docker build --file tests/docker/nvim-offline/Dockerfile \
   --build-arg DISTRO=debian \
   --build-arg NEXUS_URL="$NVIM_NEXUS_URL" \
   --build-arg NEXUS_HOST="$nexus_host" \
-  --build-arg GITHUB_MIRROR_BASE="$NVIM_GITHUB_GIT_MIRROR_BASE" \
-  --secret id=gitlab_ca,src="$NVIM_GITLAB_CA_FILE" \
-  --secret id=gitlab_token,src="$NVIM_TEST_GITLAB_TOKEN_FILE" \
+  --secret id=git_config,src="$NVIM_TEST_GIT_CONFIG_FILE" \
   --tag nvim-offline-test:debian .
 ```
 

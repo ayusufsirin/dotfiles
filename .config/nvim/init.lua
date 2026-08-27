@@ -22,9 +22,4 @@ local lazy_options = {
     border = "rounded",
   },
 }
-local git_url_format = require("config.offline").git_url_format()
-if git_url_format then
-  lazy_options.git = { url_format = git_url_format }
-end
-
 require("lazy").setup(require("plugins"), lazy_options)

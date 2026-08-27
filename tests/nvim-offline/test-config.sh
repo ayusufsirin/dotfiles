@@ -18,7 +18,7 @@ if (nvim_offline_load_profile "$invalid_profile" >/dev/null 2>&1); then
 fi
 
 (
-  unset NVIM_OFFLINE NVIM_NEXUS_URL NVIM_GITHUB_GIT_MIRROR_BASE
+  unset NVIM_OFFLINE NVIM_NEXUS_URL
   nvim_offline_load_profile "$profile_file"
   nvim_offline_apply_defaults
   [[ "$NVIM_OFFLINE" == "1" ]]
@@ -28,7 +28,7 @@ fi
 
 (
   export NVIM_NEXUS_URL="http://caller.invalid"
-  unset NVIM_OFFLINE NVIM_GITHUB_GIT_MIRROR_BASE
+  unset NVIM_OFFLINE
   nvim_offline_load_profile "$profile_file"
   [[ "$NVIM_NEXUS_URL" == "http://caller.invalid" ]]
 )
@@ -36,7 +36,6 @@ fi
 env \
   -u NVIM_OFFLINE \
   -u NVIM_NEXUS_URL \
-  -u NVIM_GITHUB_GIT_MIRROR_BASE \
   NVIM_OFFLINE_PROFILE="$profile_file" \
   nvim --headless --clean -u NONE \
   "+lua package.path='$repo_root/.config/nvim/lua/?.lua;$repo_root/.config/nvim/lua/?/init.lua;' .. package.path" \

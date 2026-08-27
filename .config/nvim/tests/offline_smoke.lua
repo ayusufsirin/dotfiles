@@ -2,11 +2,9 @@ local offline = require("config.offline")
 
 assert(offline.enabled(), "offline profile should be enabled")
 assert(offline.ready(), "offline profile should have all Nexus endpoints")
-assert(offline.git_mirror_url(), "offline profile should configure a Git mirror")
 assert(
-  offline.git_repository_url("tree-sitter/tree-sitter-c")
-    == "https://gitlab.invalid/mirror/github.com/tree-sitter/tree-sitter-c.git",
-  "Git repository URLs should use the mirror and end in .git"
+  offline.git_repository_url("tree-sitter/tree-sitter-c") == "https://github.com/tree-sitter/tree-sitter-c.git",
+  "Git repository URLs should be canonical and end in .git"
 )
 assert(#offline.tools == 16, "offline Mason manifest should contain 16 tools")
 for _, tool in ipairs(offline.tools) do
@@ -37,7 +35,8 @@ local cortex = require(index.cortex_debug)
 local cortex_url = cortex.source.download.files["marus25.cortex-debug-1.12.1.vsix"]
 assert(cortex.source.id == "pkg:generic/cortex-debug@1.12.1", "cortex-debug should not use Open VSX")
 assert(
-  cortex_url == "http://nexus.invalid/repository/marketplace/cortex-debug-1.12.1.vsix",
+  cortex_url
+    == "http://nexus.invalid/repository/marketplace.visualstudio.com/_apis/public/gallery/publishers/marus25/vsextensions/cortex-debug/1.12.1/vspackage",
   "cortex-debug should use its exact Nexus URL"
 )
 
@@ -46,7 +45,7 @@ assert(install.prefer_git, "Tree-sitter should prefer Git in offline mode")
 local parser_urls = offline.normalize_treesitter_git_urls()
 assert(#parser_urls == 21, "Tree-sitter should use 21 unique parser repositories")
 for _, parser_url in ipairs(parser_urls) do
-  assert(parser_url:find(offline.git_mirror_url(), 1, true) == 1, "Tree-sitter should use the Git mirror")
+  assert(parser_url:find("https://github.com/", 1, true) == 1, "Tree-sitter should use canonical GitHub URLs")
   assert(parser_url:match("%.git$"), "Tree-sitter clone URLs should end in .git")
 end
 

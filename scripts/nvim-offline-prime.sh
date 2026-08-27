@@ -14,7 +14,6 @@ elif [[ -n "${NVIM_OFFLINE_PROFILE:-}" ]]; then
   exit 2
 fi
 nvim_offline_apply_defaults
-nvim_offline_apply_git_environment
 
 github_release_url="${NVIM_GITHUB_RELEASE_BASE_URL:-${NVIM_NEXUS_GITHUB_URL:-}}"
 raw_url="${NVIM_NEXUS_RAW_URL:-}"
@@ -73,13 +72,13 @@ export XDG_DATA_HOME="$prime_tmp/data"
 export XDG_STATE_HOME="$prime_tmp/state"
 export XDG_CACHE_HOME="$prime_tmp/cache"
 
-echo "Installing plugins through the configured Git mirror..."
+echo "Installing plugins with the existing Git configuration..."
 nvim --headless "+Lazy! sync" +qa
 
 echo "Installing pinned Mason tools through Nexus..."
 nvim --headless "+Lazy load nvim-lspconfig" "+MasonToolsInstallSync" +qa
 
-echo "Cloning and compiling Tree-sitter parsers through the Git mirror..."
+echo "Cloning and compiling Tree-sitter parsers with canonical .git URLs..."
 nvim --headless "+lua vim.cmd('TSInstallSync! ' .. table.concat(require('config.offline').parsers, ' '))" +qa
 
 echo "Running offline health checks..."
@@ -88,4 +87,4 @@ nvim --headless "+checkhealth nvim_offline" +qa
 echo "Verifying pinned tools and parsers..."
 nvim --headless "+luafile $config_source/tests/offline_install_verify.lua" +qa
 
-echo "Offline bootstrap completed successfully. Nexus and Git mirrors contain the required content."
+echo "Offline bootstrap completed successfully. Nexus and the configured Git transport contain the required content."

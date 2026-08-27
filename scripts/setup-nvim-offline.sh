@@ -12,9 +12,9 @@ usage() {
   cat <<'EOF'
 Usage: scripts/setup-nvim-offline.sh [--profile FILE] [--preflight-only]
 
-Validates a target machine, warms/verifies all Git mirrors, and performs an
-isolated offline Neovim installation. It never installs OS packages, changes
-global Git URL settings, or stores credentials.
+Validates a target machine and performs an isolated offline Neovim
+installation. Git routing and authentication come from the machine's existing
+Git configuration; this command never creates or changes those settings.
 EOF
 }
 
@@ -43,7 +43,6 @@ done
 
 nvim_offline_load_profile "$profile_file"
 nvim_offline_apply_defaults
-nvim_offline_apply_git_environment
 export NVIM_OFFLINE_PROFILE="$profile_file"
 
 if [[ "${NVIM_OFFLINE:-}" != "1" ]]; then
@@ -82,11 +81,6 @@ if ((10#$nvim_major == 0 && 10#$nvim_minor < 10)); then
   exit 2
 fi
 
-if [[ -z "$(git config --get credential.helper 2>/dev/null || true)" ]]; then
-  echo "Configure a Git credential helper before running offline setup." >&2
-  exit 2
-fi
-
 profile_mode="$(stat -c '%a' "$profile_file" 2>/dev/null || stat -f '%Lp' "$profile_file")"
 if ((8#$profile_mode & 077)); then
   echo "Offline profile must not be accessible by group or others: chmod 600 $profile_file" >&2
@@ -102,7 +96,6 @@ trap cleanup EXIT
 NVIM_DOTFILES_ROOT="$repo_root" nvim --headless --clean -u NONE \
   "+luafile $repo_root/scripts/nvim-offline-git-manifest.lua" +qa > "$manifest_file"
 
-mirror_base="${NVIM_GITHUB_GIT_MIRROR_BASE%/}/"
 repository_count=0
 while IFS= read -r source_url; do
   [[ -n "$source_url" ]] || continue
@@ -111,11 +104,10 @@ while IFS= read -r source_url; do
     echo "Clone URL is missing .git: $source_url" >&2
     exit 1
   fi
-  resolved_url="$mirror_base${source_url#https://github.com/}"
-  printf 'Checking %s\n' "$resolved_url"
-  GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code "$resolved_url" HEAD >/dev/null
+  printf 'Checking %s\n' "$source_url"
+  GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code "$source_url" HEAD >/dev/null
 done < "$manifest_file"
-printf 'Verified %d Git repositories through the mirror.\n' "$repository_count"
+printf 'Verified %d Git repositories with the existing Git configuration.\n' "$repository_count"
 
 registry_version="$(NVIM_DOTFILES_ROOT="$repo_root" nvim --headless --clean -u NONE \
   "+lua package.path='$repo_root/.config/nvim/lua/?.lua;$repo_root/.config/nvim/lua/?/init.lua;' .. package.path; io.write(require('config.offline').registry_version)" +qa)"

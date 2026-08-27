@@ -7,16 +7,13 @@ dockerfile="$repo_root/tests/docker/nvim-offline/Dockerfile"
 env_file="${NVIM_TEST_ENV_FILE:-$repo_root/.env}"
 env_names=(
   NVIM_NEXUS_URL
-  NVIM_GITHUB_GIT_MIRROR_BASE
-  NVIM_GITLAB_CA_FILE
   NVIM_TEST_NEXUS_URL
-  NVIM_TEST_GITHUB_MIRROR_BASE
   NVIM_TEST_DOCKER_NETWORK
   NVIM_TEST_PULL_BASES
   NVIM_TEST_DEBIAN_IMAGE
   NVIM_TEST_UBUNTU_IMAGE
-  NVIM_TEST_GITLAB_CA_FILE
-  NVIM_TEST_GITLAB_TOKEN_FILE
+  NVIM_TEST_GIT_CONFIG_FILE
+  NVIM_TEST_INTERNAL_CA_FILE
 )
 declare -A caller_environment=()
 for env_name in "${env_names[@]}"; do
@@ -46,44 +43,17 @@ done
 
 nexus_url="${NVIM_TEST_NEXUS_URL:-${NVIM_NEXUS_URL:-http://nexus.company.example:8081}}"
 nexus_host="$(printf '%s' "$nexus_url" | sed -E 's#^https?://([^/:]+).*#\1#')"
-mirror_base="${NVIM_TEST_GITHUB_MIRROR_BASE:-${NVIM_GITHUB_GIT_MIRROR_BASE:-https://gitlab.company.example/mirror/github.com/}}"
 docker_network="${NVIM_TEST_DOCKER_NETWORK:-default}"
 pull_bases="${NVIM_TEST_PULL_BASES:-1}"
 debian_image="${NVIM_TEST_DEBIAN_IMAGE:-debian:12}"
 ubuntu_image="${NVIM_TEST_UBUNTU_IMAGE:-ubuntu:22.04}"
-ca_file="${NVIM_TEST_GITLAB_CA_FILE:-${NVIM_GITLAB_CA_FILE:-/usr/local/share/ca-certificates/company-internal-ca.crt}}"
-token_file="${NVIM_TEST_GITLAB_TOKEN_FILE:-}"
-temporary_token_file=""
+git_config_file="${NVIM_TEST_GIT_CONFIG_FILE:-$HOME/.gitconfig}"
+ca_file="${NVIM_TEST_INTERNAL_CA_FILE:-}"
 
-cleanup() {
-  if [[ -n "$temporary_token_file" && -f "$temporary_token_file" ]]; then
-    find "$temporary_token_file" -delete
-  fi
-}
-trap cleanup EXIT
-
-if [[ "$mirror_base" != */ ]]; then
-  mirror_base="$mirror_base/"
-fi
-
-if [[ "$mirror_base" != http://localhost:* && "$mirror_base" != http://127.0.0.1:* ]]; then
-  if [[ -z "$token_file" ]]; then
-    if [[ ! -t 0 ]]; then
-      echo "Set NVIM_TEST_GITLAB_TOKEN_FILE when running non-interactively." >&2
-      exit 2
-    fi
-    temporary_token_file="$(mktemp)"
-    chmod 600 "$temporary_token_file"
-    read -r -s -p "GitLab mirror read token: " token
-    echo
-    printf '%s' "$token" > "$temporary_token_file"
-    unset token
-    token_file="$temporary_token_file"
-  fi
-  if [[ ! -s "$token_file" ]]; then
-    echo "GitLab token file is missing or empty: $token_file" >&2
-    exit 2
-  fi
+if [[ ! -r "$git_config_file" ]]; then
+  echo "Git config is missing or unreadable: $git_config_file" >&2
+  echo "Set NVIM_TEST_GIT_CONFIG_FILE to a self-contained Git config that can clone the canonical GitHub URLs." >&2
+  exit 2
 fi
 
 if [[ "$pull_bases" == "1" ]]; then
@@ -91,12 +61,9 @@ if [[ "$pull_bases" == "1" ]]; then
   docker pull "$ubuntu_image"
 fi
 
-secret_args=()
-if [[ -n "$token_file" ]]; then
-  secret_args+=(--secret "id=gitlab_token,src=$token_file")
-fi
+secret_args=(--secret "id=git_config,src=$git_config_file")
 if [[ -r "$ca_file" ]]; then
-  secret_args+=(--secret "id=gitlab_ca,src=$ca_file")
+  secret_args+=(--secret "id=internal_ca,src=$ca_file")
 fi
 
 build_one() {
@@ -116,30 +83,11 @@ build_one() {
     --build-arg "DISTRO=$distro" \
     --build-arg "NEXUS_URL=$nexus_url" \
     --build-arg "NEXUS_HOST=$nexus_host" \
-    --build-arg "GITHUB_MIRROR_BASE=$mirror_base" \
     "${secret_args[@]}" \
     "$repo_root"
 
   docker run --rm "$tag"
-
-  if [[ -n "$token_file" ]]; then
-    local token token_base64
-    token="$(<"$token_file")"
-    token_base64="$(printf 'oauth2:%s' "$token" | base64 | tr -d '\n')"
-    if docker history --no-trunc --format '{{.CreatedBy}}' "$tag" | grep -Fq -- "$token"; then
-      echo "GitLab token leaked into Docker history for $tag" >&2
-      return 1
-    fi
-    if docker inspect --format '{{json .Config.Env}}' "$tag" | grep -Fq -- "$token"; then
-      echo "GitLab token leaked into the image environment for $tag" >&2
-      return 1
-    fi
-    if docker history --no-trunc --format '{{.CreatedBy}}' "$tag" | grep -Fq -- "$token_base64"; then
-      echo "Encoded GitLab credentials leaked into Docker history for $tag" >&2
-      return 1
-    fi
-    unset token token_base64
-  fi
+  docker run --rm "$tag" sh -c 'test ! -e "$HOME/.gitconfig"'
 }
 
 build_one debian "$debian_image"

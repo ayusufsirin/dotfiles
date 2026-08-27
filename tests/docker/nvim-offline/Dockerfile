@@ -6,7 +6,6 @@ FROM ${BASE_IMAGE}
 ARG DISTRO=debian
 ARG NEXUS_URL=http://nexus.company.example:8081
 ARG NEXUS_HOST=nexus.company.example
-ARG GITHUB_MIRROR_BASE=https://gitlab.company.example/mirror/github.com/
 ARG NEOVIM_VERSION=0.12.3
 ARG NEOVIM_SHA256=5709e7f3653c9ccc96bb78e79ae1ad3b1191f34d12075f27c469f702f301a2e8
 ARG NODE_VERSION=22.23.2
@@ -50,10 +49,10 @@ RUN set -eux; \
       xz-utils; \
     find /var/lib/apt/lists -mindepth 1 -delete
 
-RUN --mount=type=secret,id=gitlab_ca,required=false \
+RUN --mount=type=secret,id=internal_ca,required=false \
     set -eux; \
-    if [ -s /run/secrets/gitlab_ca ]; then \
-      cp /run/secrets/gitlab_ca /usr/local/share/ca-certificates/gitlab-internal.crt; \
+    if [ -s /run/secrets/internal_ca ]; then \
+      cp /run/secrets/internal_ca /usr/local/share/ca-certificates/internal-ca.crt; \
       update-ca-certificates; \
     fi
 
@@ -82,7 +81,7 @@ RUN set -eux; \
     rm "$nvim_appimage"; \
     nvim --version | head -1
 
-RUN useradd --create-home --shell /bin/bash nvimtest
+RUN useradd --uid 1000 --create-home --shell /bin/bash nvimtest
 
 COPY --chown=nvimtest:nvimtest .config/nvim /home/nvimtest/.dotfiles/.config/nvim
 COPY --chown=nvimtest:nvimtest scripts/nvim-offline-prime.sh /home/nvimtest/.dotfiles/scripts/nvim-offline-prime.sh
@@ -94,7 +93,6 @@ WORKDIR /home/nvimtest/.dotfiles
 ENV HOME=/home/nvimtest \
     NVIM_OFFLINE=1 \
     NVIM_NEXUS_URL=${NEXUS_URL} \
-    NVIM_GITHUB_GIT_MIRROR_BASE=${GITHUB_MIRROR_BASE} \
     NVIM_GITHUB_RELEASE_BASE_URL=${NEXUS_URL}/repository/github.com \
     NVIM_NEXUS_CORTEX_DEBUG_URL=${NEXUS_URL}/repository/marketplace.visualstudio.com/_apis/public/gallery/publishers/marus25/vsextensions/cortex-debug/1.12.1/vspackage \
     NVIM_NEXUS_PYPI_URL=${NEXUS_URL}/repository/pypi/simple \
@@ -103,23 +101,12 @@ ENV HOME=/home/nvimtest \
     GIT_TERMINAL_PROMPT=0 \
     GIT_PROGRESS_DELAY=999999
 
-RUN --mount=type=secret,id=gitlab_token,required=false \
+RUN --mount=type=secret,id=git_config,target=/home/nvimtest/.gitconfig,uid=1000,gid=1000,mode=0400,required=true \
     set -eu; \
-    export GIT_CONFIG_COUNT=1; \
-    export GIT_CONFIG_KEY_0="url.${GITHUB_MIRROR_BASE}.insteadOf"; \
-    export GIT_CONFIG_VALUE_0="https://github.com/"; \
-    if [ -s /run/secrets/gitlab_token ]; then \
-      mirror_host=$(printf '%s' "$GITHUB_MIRROR_BASE" | sed -E 's#^https?://([^/]+)/.*#\1#'); \
-      basic_auth=$(printf 'oauth2:%s' "$(cat /run/secrets/gitlab_token)" | base64 | tr -d '\n'); \
-      export GIT_CONFIG_COUNT=2; \
-      export GIT_CONFIG_KEY_1="http.https://${mirror_host}/.extraHeader"; \
-      export GIT_CONFIG_VALUE_1="Authorization: Basic ${basic_auth}"; \
-    fi; \
     for source_url in \
       https://github.com/nvim-lua/plenary.nvim.git \
       https://github.com/tree-sitter/tree-sitter-c.git; do \
-      resolved=$(git ls-remote --get-url "$source_url"); \
-      case "$resolved" in "$GITHUB_MIRROR_BASE"*.git) ;; *) echo "GitHub Git clone mirror rewrite failed: $resolved" >&2; exit 1 ;; esac; \
+      git ls-remote --exit-code "$source_url" HEAD >/dev/null; \
     done; \
     ./scripts/nvim-offline-prime.sh
 
