@@ -3,6 +3,16 @@ local opt = vim.opt
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_ruby_provider = 0
 
+if vim.env.WAYLAND_DISPLAY and vim.env.WAYLAND_DISPLAY ~= "" then
+  if vim.fn.executable("wl-copy") == 1 and vim.fn.executable("wl-paste") == 1 then
+    vim.g.clipboard = "wl-copy"
+  elseif vim.env.DISPLAY and vim.env.DISPLAY ~= "" and vim.fn.executable("xclip") == 1 then
+    vim.g.clipboard = "xclip"
+  end
+elseif vim.env.DISPLAY and vim.env.DISPLAY ~= "" and vim.fn.executable("xclip") == 1 then
+  vim.g.clipboard = "xclip"
+end
+
 local mason_bin = vim.fn.stdpath("data") .. "/mason/bin"
 local path_sep = vim.fn.has("win32") == 1 and ";" or ":"
 if not vim.env.PATH:find(mason_bin, 1, true) then
