@@ -42,11 +42,15 @@ return {
       end
       local ensure_installed = offline.ensure_installed(default_tools)
 
-      require("mason-tool-installer").setup({
+      local mason_tool_installer = require("mason-tool-installer")
+      mason_tool_installer.setup({
         ensure_installed = ensure_installed,
         auto_update = false,
         run_on_start = not offline.enabled() or offline.ready(),
       })
+      if vim.v.vim_did_enter == 1 then
+        mason_tool_installer.run_on_start()
+      end
 
       local on_attach = function(client, bufnr)
         if client.name == "clangd" then
