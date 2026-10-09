@@ -38,26 +38,28 @@ These must exist on the machine before the config can bootstrap cleanly:
 
 Useful extras:
 
-- `xclip` or `wl-clipboard` on Linux for `clipboard=unnamedplus`
+- `wl-clipboard` and `xclip` on Linux for portable `clipboard=unnamedplus`
+  support; Neovim selects `wl-copy` in Wayland sessions and falls back to
+  `xclip` in X11 sessions
 - `make` and a C toolchain if you later add plugins with native builds
 
 ### Debian / Ubuntu
 
 ```bash
 sudo apt update
-sudo apt install -y neovim git curl tar gzip unzip ripgrep fd-find python3 python3-venv nodejs npm xclip
+sudo apt install -y neovim git curl tar gzip unzip ripgrep fd-find python3 python3-venv nodejs npm wl-clipboard xclip
 ```
 
 ### Fedora
 
 ```bash
-sudo dnf install -y neovim git curl tar gzip unzip ripgrep fd-find python3 python3-pip python3-virtualenv nodejs npm xclip
+sudo dnf install -y neovim git curl tar gzip unzip ripgrep fd-find python3 python3-pip python3-virtualenv nodejs npm wl-clipboard xclip
 ```
 
 ### Arch
 
 ```bash
-sudo pacman -S --needed neovim git curl tar gzip unzip ripgrep fd python python-virtualenv nodejs npm xclip
+sudo pacman -S --needed neovim git curl tar gzip unzip ripgrep fd python python-virtualenv nodejs npm wl-clipboard xclip
 ```
 
 ### macOS
