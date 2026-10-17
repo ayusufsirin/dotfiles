@@ -1,0 +1,16 @@
+# Opt-in: copy this file into <project>/.opencode/hook/hooks.yaml.
+# Do NOT install globally: project-level tool availability and rules differ.
+# Hooks are shell-only: no LLM tool calls. They do not modify source files.
+hooks:
+  - name: python-ruff-check
+    event: session.idle
+    scope: main
+    conditions:
+      - matchesAnyPath: "**/*.py"
+    actions:
+      - bash: "if command -v ruff >/dev/null; then ruff check --output-format concise .; else echo 'SKIP: ruff unavailable'; fi"
+
+# Note: the example above checks the entire project at session idle.
+# For large projects, replace with a project-owned pre-commit command or
+# a dedicated targeted check that knows the project's changed-file semantics.
+# Do not use `ruff check .` in a large monorepo without scoping.

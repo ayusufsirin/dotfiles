@@ -2,63 +2,143 @@
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
   "agents": {
     "sisyphus": {
-      "model": "openai/gpt-5.4"
+      "model": "openai/gpt-6-sol",
+      "fallback_models": [
+        "google/gemini-3.1-pro-preview",
+        "openai/gpt-5.5"
+      ]
     },
     "hephaestus": {
-      "model": "openai/gpt-5.3-codex"
+      "model": "openai/gpt-5.5",
+      "fallback_models": [
+        "openai/gpt-5.4",
+        "google/gemini-3.1-pro-preview"
+      ]
     },
     "oracle": {
-      "model": "openai/gpt-5.4"
+      "model": "openai/gpt-6-astra",
+      "fallback_models": [
+        "google/gemini-3.1-pro-preview",
+        "openai/gpt-6-sol"
+      ]
     },
     "librarian": {
-      "model": "openai/gpt-5.4-mini"
+      "model": "google/gemini-3-flash-preview",
+      "fallback_models": [
+        "openai/gpt-5.4-mini",
+        "opencode/mimo-v2.6-flash-free"
+      ]
     },
     "explore": {
-      "model": "openai/gpt-5.4-mini"
+      "model": "google/gemini-3.1-flash-lite",
+      "fallback_models": [
+        "openai/gpt-5.4-mini",
+        "opencode/mimo-v2.6-flash-free"
+      ]
     },
     "multimodal-looker": {
-      "model": "openai/gpt-5.4"
+      "model": "google/gemini-3.1-pro-preview",
+      "fallback_models": [
+        "openai/gpt-6-sol"
+      ]
     },
     "prometheus": {
-      "model": "openai/gpt-5.4"
+      "model": "openai/gpt-6-sol",
+      "fallback_models": [
+        "google/gemini-3.1-pro-preview",
+        "openai/gpt-5.5"
+      ]
     },
     "metis": {
-      "model": "openai/gpt-5.4"
+      "model": "openai/gpt-5.5",
+      "fallback_models": [
+        "google/gemini-3.1-pro-preview"
+      ]
     },
     "momus": {
-      "model": "openai/gpt-5.4"
+      "model": "google/gemini-3.1-pro-preview",
+      "fallback_models": [
+        "openai/gpt-5.5"
+      ]
     },
     "atlas": {
-      "model": "openai/gpt-5.3-codex"
+      "model": "openai/gpt-5.5",
+      "fallback_models": [
+        "google/gemini-3.1-pro-preview",
+        "openai/gpt-5.4"
+      ]
     },
     "sisyphus-junior": {
-      "model": "openai/gpt-5.3-codex"
+      "model": "openai/gpt-5.4",
+      "fallback_models": [
+        "google/gemini-3-flash-preview",
+        "openai/gpt-5.4-mini"
+      ]
     }
   },
   "categories": {
     "visual-engineering": {
-      "model": "opencode-go/kimi-2.5"
+      "model": "google/gemini-3.1-pro-preview",
+      "fallback_models": [
+        "openai/gpt-6-sol"
+      ]
     },
     "ultrabrain": {
-      "model": "openai/gpt-5.4"
+      "model": "openai/gpt-6-astra",
+      "fallback_models": [
+        "google/gemini-3.1-pro-preview"
+      ]
     },
     "deep": {
-      "model": "openai/gpt-5.3-codex"
+      "model": "openai/gpt-5.5",
+      "fallback_models": [
+        "google/gemini-3.1-pro-preview"
+      ]
     },
     "artistry": {
-      "model": "opencode-go/kimi-2.5"
+      "model": "google/gemini-3.1-pro-preview",
+      "fallback_models": [
+        "openai/gpt-6-sol"
+      ]
     },
     "quick": {
-      "model": "openai/gpt-5.4-mini"
+      "model": "openai/gpt-5.4-mini",
+      "fallback_models": [
+        "google/gemini-3.1-flash-lite",
+        "opencode/mimo-v2.6-flash-free"
+      ]
     },
     "unspecified-low": {
-      "model": "openai/gpt-5.4-mini"
+      "model": "openai/gpt-5.4-mini",
+      "fallback_models": [
+        "google/gemini-3.1-flash-lite"
+      ]
     },
     "unspecified-high": {
-      "model": "openai/gpt-5.3-codex"
+      "model": "openai/gpt-5.5",
+      "fallback_models": [
+        "google/gemini-3.1-pro-preview"
+      ]
     },
     "writing": {
-      "model": "openai/gpt-5.4-mini"
+      "model": "google/gemini-3-flash-preview",
+      "fallback_models": [
+        "openai/gpt-5.4-mini"
+      ]
     }
+  },
+  "model_fallback": true,
+  "runtime_fallback": {
+    "enabled": true,
+    "retry_on_errors": [
+      429,
+      500,
+      502,
+      503,
+      504
+    ],
+    "max_fallback_attempts": 2,
+    "cooldown_seconds": 60,
+    "notify_on_fallback": true
   }
 }

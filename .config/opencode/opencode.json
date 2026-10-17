@@ -2,7 +2,10 @@
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
     "oh-my-openagent@3.14.0",
-    "@rama_nigg/open-cursor@latest"
+    "@rama_nigg/open-cursor@latest",
+    "opencode-antigravity-auth@latest",
+    "@dietrichgebert/ponytail",
+    "opencode-yaml-hooks"
   ],
   "provider": {
     "ollama": {
