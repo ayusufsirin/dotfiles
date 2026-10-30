@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(
+    cd "$(dirname "${BASH_SOURCE[0]}")" &&
+    pwd
+)"
+
+if [[ $# -lt 2 ]]; then
+    echo "Usage: $0 <package> <executable> [arguments...]" >&2
+    exit 2
+fi
+
+package="$1"
+executable="$2"
+shift 2
+
+path="$("$SCRIPT_DIR/find-executable" "$package" "$executable")"
+
+source "$SCRIPT_DIR/ros-env.sh"
+
+exec "$path" "$@"

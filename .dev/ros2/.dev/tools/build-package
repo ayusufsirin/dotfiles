@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+SCRIPT_DIR="$(
+    cd "$(dirname "${BASH_SOURCE[0]}")" &&
+    pwd
+)"
+
+OSA_WS_ROOT="$(
+    cd "$SCRIPT_DIR/../.." &&
+    pwd
+)"
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 <package> [additional colcon arguments...]" >&2
+    exit 2
+fi
+
+package="$1"
+shift
+
+# Source ROS before enabling nounset because ROS/colcon setup scripts
+# are not guaranteed to be compatible with `set -u`.
+source /opt/ros/humble/setup.bash
+
+set -u
+
+cd "$OSA_WS_ROOT"
+
+exec colcon build \
+    --packages-up-to "$package" \
+    "$@"
