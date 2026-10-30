@@ -1,0 +1,15 @@
+{
+  "image": "localhost/stm32-dev:local",
+  "distrobox": "stm32-dev",
+  "base": "ubuntu:24.04",
+  "persistent_store": "~/.local/share/stm32-dev",
+  "project_profile": {
+    "name": "Cube_v2",
+    "mcu": "STM32F722RET6",
+    "family": "STM32F7",
+    "cubemx": "6.16.1",
+    "firmware": "STM32Cube_FW_F7_V1.17.0",
+    "compiler_family": "GCC",
+    "exact_gcc_version": null
+  }
+}

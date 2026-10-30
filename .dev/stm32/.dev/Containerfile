@@ -1,0 +1,63 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Generic, reproducible Linux/STM32 build dependencies.
+# ST proprietary tools are intentionally kept in a persistent host store
+# and mounted into CLion containers, so adding a new CubeMX/CLT version
+# does not require rebuilding this image.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    build-essential \
+    ca-certificates \
+    clang \
+    clang-format \
+    clang-tidy \
+    clangd \
+    cmake \
+    cppcheck \
+    curl \
+    file \
+    gdb \
+    gdb-multiarch \
+    gcc-arm-none-eabi \
+    binutils-arm-none-eabi \
+    libnewlib-arm-none-eabi \
+    git \
+    git-lfs \
+    make \
+    ninja-build \
+    openocd \
+    pkg-config \
+    python3 \
+    python3-pip \
+    python3-venv \
+    rsync \
+    unzip \
+    usbutils \
+    wget \
+    xz-utils \
+    libusb-1.0-0 \
+    libusb-1.0-0-dev \
+    libgtk-3-0 \
+    libx11-6 \
+    libxext6 \
+    libxrender1 \
+    libxtst6 \
+    libxi6 \
+    libfreetype6 \
+    fontconfig \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY env/stm32-env.sh /usr/local/share/stm32-dev/stm32-env.sh
+COPY scripts/stm32-tools.sh /usr/local/bin/stm32-tools
+COPY scripts/stm32-profile.sh /usr/local/bin/stm32-profile
+
+RUN chmod 0755 \
+    /usr/local/bin/stm32-tools \
+    /usr/local/bin/stm32-profile \
+    /usr/local/share/stm32-dev/stm32-env.sh
+
+ENV STM32_ENV_FILE=/usr/local/share/stm32-dev/stm32-env.sh
+
+WORKDIR /workspace

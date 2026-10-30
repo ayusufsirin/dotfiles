@@ -1,0 +1,3 @@
+# Do not commit downloaded ST installers or generated local state.
+installers/
+*.log
