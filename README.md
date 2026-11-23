@@ -15,3 +15,11 @@ To see the mouse buttons as a list to create `logid.cfg`:
 ```bash
 solaar show
 ```
+
+## Solaar
+
+```bash
+mkdir -p ~/.config/solaar
+ln -s ~/.dotfiles/.config/solaar/rules.yaml \
+      ~/.config/solaar/rules.yaml
+```

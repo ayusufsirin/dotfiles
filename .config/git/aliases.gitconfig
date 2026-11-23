@@ -1,0 +1,2 @@
+[alias]
+    adgo = log --all --decorate --graph --oneline
