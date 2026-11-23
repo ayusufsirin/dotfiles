@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+  <storageModule moduleId="org.eclipse.cdt.core.settings">
+    <cconfiguration id="debug.fixture">
+      <storageModule moduleId="org.eclipse.cdt.core.settings" name="Debug"/>
+      <storageModule moduleId="cdtBuildSystem">
+        <configuration artifactName="${ProjName}" name="Debug">
+          <folderInfo name="/" resourcePath="">
+            <toolChain name="MCU ARM GCC">
+              <option name="MCU" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.target_mcu" value="STM32F722RETx" valueType="string"/>
+              <builder buildPath="${workspace_loc:/wrong_old_name}/Debug" name="Gnu Make Builder"/>
+            </toolChain>
+          </folderInfo>
+        </configuration>
+      </storageModule>
+    </cconfiguration>
+    <cconfiguration id="release.fixture">
+      <storageModule moduleId="org.eclipse.cdt.core.settings" name="Release"/>
+      <storageModule moduleId="cdtBuildSystem">
+        <configuration artifactName="${ProjName}" name="Release">
+          <folderInfo name="/" resourcePath="">
+            <toolChain name="MCU ARM GCC">
+              <option name="MCU" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.target_mcu" value="STM32F722RETx" valueType="string"/>
+              <builder buildPath="${workspace_loc:/stm32_managed_only}/Release" name="Gnu Make Builder"/>
+            </toolChain>
+          </folderInfo>
+        </configuration>
+      </storageModule>
+    </cconfiguration>
+  </storageModule>
+</cproject>

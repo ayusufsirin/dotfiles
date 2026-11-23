@@ -1,0 +1,24 @@
+# Task 8 evidence - nvim-dap-cortex-debug wiring
+# Generated: 2026-06-27T08:42:08+03:00
+
+## 1. DAP load with assert(dap)
+$ nvim --headless '+lua require(\"lazy\").load({plugins={\"nvim-dap\"}})' '+lua local dap=require(\"dap\"); assert(dap)' +qa
+EXIT_CODE=0
+
+## 2. checkhealth dap-cortex-debug
+$ nvim --headless '+checkhealth dap-cortex-debug' +qa
+Running healthchecks...EXIT_CODE=0
+
+## 3. Constrained PATH DAP load (missing STM32 tools)
+$ PATH=/usr/bin:/bin nvim --headless '+lua require(\"lazy\").load({plugins={\"nvim-dap\"}})' +qa
+EXIT_CODE=0
+
+## 4. Mason registry check for cortex-debug
+$ nvim --headless '+lua local ok, reg = pcall(require, \"mason-registry\"); ...' +qa
+cortex-debug in registry: true
+total packages: 1
+EXIT_CODE=0
+
+## 5. LSP load with conditional cortex-debug ensure_installed
+$ nvim --headless '+lua require(\"lazy\").load({plugins={\"nvim-lspconfig\"}})' +qa
+EXIT_CODE=0

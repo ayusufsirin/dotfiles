@@ -1,0 +1,7 @@
+<package format="3">
+  <name>pkg_a</name>
+  <version>0.0.0</version>
+  <description>appdev test fixture</description>
+  <maintainer email="nobody@example.invalid">Nobody</maintainer>
+  <license>MIT</license>
+</package>

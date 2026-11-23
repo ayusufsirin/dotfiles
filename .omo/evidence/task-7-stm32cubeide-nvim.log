@@ -1,0 +1,90 @@
+task=7 stm32cubeide-nvim
+timestamp=2026-06-27T03:51:00+03:00
+cwd=/home/joseph/.dotfiles/.config/nvim
+fixture-created: 2026-06-27T03:51:00+03:00
+/tmp/nvim-stm32-task-fixture/app.ioc
+/tmp/nvim-stm32-task-fixture/.project
+/tmp/nvim-stm32-task-fixture/.cproject
+/tmp/nvim-stm32-task-fixture/.mxproject
+/tmp/nvim-stm32-task-fixture/Debug/Makefile
+/tmp/nvim-stm32-task-fixture/Debug/app.elf
+/tmp/nvim-stm32-task-fixture/Src/main.c
+/tmp/nvim-stm32-task-nonproject/README.md
+/tmp/nvim-stm32-task-headless-test.lua
+/tmp/nvim-stm32-fake-bin/compiledb
+
+status-before:
+ M .config/nvim/lazy-lock.json
+ M .config/nvim/lua/plugins/dap.lua
+ M .config/nvim/lua/plugins/lsp.lua
+ M .config/nvim/lua/plugins/tasks.lua
+?? .config/go/
+?? .config/nvim/.codegraph
+?? .config/nvim/.omo/
+?? .config/nvim/lua/overseer/template/stm32.lua
+?? .config/nvim/lua/plugins/edgy.lua
+?? .omo/
+?? logid.cfg
+
+headless-neovim-command:
+nvim --headless -u NONE --cmd 'set rtp+=/home/joseph/.dotfiles/.config/nvim' -c 'luafile /tmp/nvim-stm32-task-headless-test.lua' -c 'qa'
+project task count=6
+project task: STM32: build
+project task: STM32: clean
+project task: STM32: generate compile_commands.json
+project task: STM32: flash
+project task: STM32: erase
+project task: STM32: openocd server
+non-project task count=0
+build cmd=bash -lc make -C 'Debug'
+clean cmd=bash -lc make clean -C 'Debug'
+compile cmd=bash -lc echo 'STM32 compile_commands.json generation requires one of: compiledb, bear. Install one and rerun this task.'
+flash cmd=bash -lc STM32_Programmer_CLI -c port=SWD -w '/tmp/nvim-stm32-task-fixture/Debug/app.elf' -v -rst
+erase cmd=bash -lc STM32_Programmer_CLI -c port=SWD -e all
+openocd cmd=bash -lc openocd -f interface/stlink.cfg -f 'target/stm32f4x.cfg'
+compile (compiledb available) cmd=bash -lc compiledb make -C 'Debug'
+overseer loaded and stm32 template registered
+stm32 overseer task qa ok
+headless-neovim-exit=0
+
+verification-summary:
+- Overseer template namespace includes stm32 alongside builtin and ros2 (lua/plugins/tasks.lua).
+- STM32 tasks are generated only inside STM32 projects (Debug/Makefile + markers); non-project returns 0 tasks.
+- Build command contains 'make' and '-C Debug' using the selected/default config directory.
+- Clean command contains 'make clean' and '-C Debug'.
+- Compile DB task prefers compiledb when available, falls back to bear, and emits actionable missing-tool task when neither is present.
+- Flash command contains STM32_Programmer_CLI and auto-selected Debug/app.elf; task generation does not execute the flash.
+- Erase command contains STM32_Programmer_CLI -e all and requires confirmation (mocked as 'erase' in fixture).
+- OpenOCD command defaults to interface/stlink.cfg and accepts a target cfg prompt (target/stm32f4x.cfg in fixture).
+- No STM32_Programmer_CLI, openocd, make, or hardware-affecting commands were executed during QA.
+
+manual-qa-probes:
+stale_state: timestamp and git status captured in this log.
+dirty_worktree: status before/after captured; product files intended: lua/overseer/template/stm32.lua, lua/plugins/tasks.lua.
+misleading_success_output: printed detected task names/commands above with exact exit status.
+generated_cached_artifacts: fake fixtures under /tmp only; cleanup receipt below.
+malformed_input: non-project cwd and Release-only fixture asserted no crash.
+hung_commands: bounded headless Neovim only; no make/programmer/openocd/gdb run.
+prompt_injection: erase uses exact 'erase' confirmation; input is not interpolated into shell.
+cancel_resume: not applicable; single bounded local QA command.
+flaky_tests: deterministic /tmp fixtures with explicit cleanup receipt below.
+repeated_interruptions: not applicable; no external services or hardware.
+
+note-on-stm32_debug.lua:
+During setup the working tree showed config/stm32_debug.lua deleted; it was restored from HEAD (commit 964386e) because Task 7 depends on Task 6 discovery APIs. The file is not part of this task's commit scope and is unmodified relative to HEAD after restoration.
+
+cleanup:
+fixture-cleanup-exit=0
+
+status-after:
+ M .config/nvim/lazy-lock.json
+ M .config/nvim/lua/plugins/dap.lua
+ M .config/nvim/lua/plugins/lsp.lua
+ M .config/nvim/lua/plugins/tasks.lua
+?? .config/go/
+?? .config/nvim/.codegraph
+?? .config/nvim/.omo/
+?? .config/nvim/lua/overseer/template/stm32.lua
+?? .config/nvim/lua/plugins/edgy.lua
+?? .omo/
+?? logid.cfg

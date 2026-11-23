@@ -1,0 +1,44 @@
+================================================================================
+Task 14 gated hardware QA verification
+================================================================================
+
+Timestamp: 2026-06-27T09:16:48+03:00
+
+================================================================================
+README.md gated hardware QA grep verification
+================================================================================
+
+--- STM32_QA_HARDWARE ---
+328:   export STM32_QA_HARDWARE=1
+351:These commands are examples for you to copy, review, and run deliberately. Automated verification and CI scripts must skip them unless `STM32_QA_HARDWARE=1` is set and every placeholder has been replaced by an explicit, reviewed value.
+
+--- STM32_Programmer_CLI -l ---
+336:  STM32_Programmer_CLI -l
+
+--- openocd -f ---
+231:- `STM32: openocd server` — starts `openocd -f interface/stlink.cfg -f <target-cfg>`; prompts for the target config when none is set.
+344:  openocd -f interface/stlink.cfg -f target/<target>.cfg -c "init; targets; shutdown"
+
+--- arm-none-eabi-gdb ---
+212:- `arm-none-eabi-gdb` — used by `nvim-dap-cortex-debug` for DAP debugging. It is also part of STM32CubeCLT or a standalone GNU Arm Embedded Toolchain.
+348:  arm-none-eabi-gdb <elf> -ex "target extended-remote :3333" -ex "monitor reset halt" -ex "info registers" -ex "detach" -ex "quit"
+
+================================================================================
+Task 13 transcript hardware execution inspection
+================================================================================
+
+Task 13 evidence path: /home/joseph/.dotfiles/.config/nvim/.omo/evidence/task-13-stm32cubeide-nvim.log
+
+--- STM32_QA_HARDWARE=1 in Task 13 evidence ---
+RESULT: STM32_QA_HARDWARE=1 was NOT set in Task 13
+
+--- Actual hardware command execution in Task 13 evidence ---
+244:OK: no STM32_Programmer_CLI -c port=SWD, openocd -f, or arm-none-eabi-gdb target extended-remote execution found
+
+================================================================================
+Conclusion
+================================================================================
+Task 14 README.md now contains an explicitly gated optional hardware QA checklist.
+Task 13 evidence confirms no hardware commands were executed by default.
+No STM32_Programmer_CLI, openocd, arm-none-eabi-gdb, make, flash, erase, or hardware connect commands were run during this task.
+================================================================================

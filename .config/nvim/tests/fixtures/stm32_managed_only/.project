@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+  <name>stm32_managed_only</name>
+  <buildSpec>
+    <buildCommand>
+      <name>org.eclipse.cdt.managedbuilder.core.genmakebuilder</name>
+    </buildCommand>
+  </buildSpec>
+  <natures>
+    <nature>com.st.stm32cube.ide.mcu.MCUProjectNature</nature>
+    <nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
+  </natures>
+</projectDescription>

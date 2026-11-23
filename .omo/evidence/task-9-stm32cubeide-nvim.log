@@ -1,0 +1,84 @@
+=== Task 9 STM32 command-builder QA ===
+Fixture: /tmp/nvim-stm32-task9-fixture
+
+PROJECT
+  root: /tmp/nvim-stm32-task9-fixture
+  default_config: Debug
+  elf_candidates: 1
+BUILD:
+  command: make -j"$(nproc 2>/dev/null || echo 4)" all -C '/tmp/nvim-stm32-task9-fixture/Debug'
+  extra1: table: 0x411f9fe0
+CLEAN:
+  command: make clean -C '/tmp/nvim-stm32-task9-fixture/Debug'
+  extra1: table: 0x411f9fe0
+COMPILE_DB:
+  command: compiledb make -C '/tmp/nvim-stm32-task9-fixture/Debug'
+  extra1: table: 0x411f9fe0
+FLASH:
+  command: STM32_Programmer_CLI -c port=SWD -w '/tmp/nvim-stm32-task9-fixture/Debug/project.elf' -v -rst
+  extra1: /tmp/nvim-stm32-task9-fixture/Debug/project.elf
+  extra2: table: 0x411faf08
+ERASE:
+  command: STM32_Programmer_CLI -c port=SWD -e all
+OPENOCD:
+  command: openocd -f 'interface/stlink.cfg' -f 'target/stm32f4x.cfg'
+  extra1: interface/stlink.cfg
+  extra2: target/stm32f4x.cfg
+INSPECT LINES:
+  STM32 debug environment
+  
+  STM32CubeIDE project: project
+  Root: /tmp/nvim-stm32-task9-fixture
+  Build configs: Debug, Release
+  Default config: Debug
+  Makefile: /tmp/nvim-stm32-task9-fixture/Debug/Makefile
+  ELF candidates: Debug/project.elf
+  IOC: /tmp/nvim-stm32-task9-fixture/project.ioc
+  
+  Tool availability:
+    Available: STM32_Programmer_CLI, openocd, arm-none-eabi-gdb, compiledb, bear, make
+    Missing: none
+  
+  OpenOCD interface: interface/stlink.cfg
+  OpenOCD target: <not set; pass opts.target or set project.openocd_target>
+  
+  Suggested next steps:
+    - Build: :lua require('config.stm32_debug').build_current_config(project)
+    - Clean: :lua require('config.stm32_debug').clean_current_config(project)
+    - Generate compile_commands.json: :lua require('config.stm32_debug').generate_compile_commands(project)
+    - Flash: :lua require('config.stm32_debug').flash_elf(project)
+    - Erase: :lua require('config.stm32_debug').erase_chip(true) -- review before executing
+    - OpenOCD server: :lua require('config.stm32_debug').start_openocd(project, {target='stm32f4x.cfg'})
+Exit code (tools available): 0
+
+---
+=== Missing STM32 tools QA ===
+flash_elf missing tool -> ok=nil err=STM32_Programmer_CLI is not on PATH. Install STM32CubeProgrammer (part of STM32CubeCLT) and add it to PATH.
+erase_chip missing tool -> ok=nil err=STM32_Programmer_CLI is not on PATH. Install STM32CubeProgrammer (part of STM32CubeCLT) and add it to PATH.
+start_openocd missing tool -> ok=nil err=openocd is not on PATH. Install OpenOCD and add it to PATH for debug-server tasks. interface=interface/stlink.cfg
+generate_compile_commands missing tool -> ok=nil err=No compile database tool found. Install 'compiledb' (recommended) or 'bear', and ensure it is on PATH.
+INSPECT (missing tools):
+  STM32 debug environment
+  
+  STM32CubeIDE project: project
+  Root: /tmp/nvim-stm32-task9-fixture
+  Build configs: Debug, Release
+  Default config: Debug
+  Makefile: /tmp/nvim-stm32-task9-fixture/Debug/Makefile
+  ELF candidates: Debug/project.elf
+  IOC: /tmp/nvim-stm32-task9-fixture/project.ioc
+  
+  Tool availability:
+    Available: make
+    Missing: STM32_Programmer_CLI, openocd, arm-none-eabi-gdb, compiledb, bear
+  
+  OpenOCD interface: interface/stlink.cfg
+  OpenOCD target: <not set; pass opts.target or set project.openocd_target>
+  
+  Suggested next steps:
+    - Build: :lua require('config.stm32_debug').build_current_config(project)
+    - Clean: :lua require('config.stm32_debug').clean_current_config(project)
+    - Install 'compiledb' or 'bear' to generate compile_commands.json for clangd.
+    - Install STM32CubeProgrammer / STM32CubeCLT and add STM32_Programmer_CLI to PATH for flash/erase.
+    - Install OpenOCD and add it to PATH for debug-server tasks.
+    - Install arm-none-eabi-gdb (part of STM32CubeCLT or ARM GCC) for DAP debugging.Exit code (missing tools): 0

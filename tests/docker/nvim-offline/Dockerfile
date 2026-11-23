@@ -1,0 +1,116 @@
+# syntax=docker/dockerfile:1.7
+
+ARG BASE_IMAGE=debian:12
+FROM ${BASE_IMAGE}
+
+ARG DISTRO=debian
+ARG NEXUS_URL=http://nexus.company.example:8081
+ARG NEXUS_HOST=nexus.company.example
+ARG NEOVIM_VERSION=0.12.3
+ARG NEOVIM_SHA256=5709e7f3653c9ccc96bb78e79ae1ad3b1191f34d12075f27c469f702f301a2e8
+ARG NODE_VERSION=22.23.2
+ARG NODE_SHA256=d60acfe00a2932254bb0ad20e01b0d74397a0875595de719654b214f4b03f307
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN set -eux; \
+    case "$DISTRO" in \
+      debian) \
+        printf '%s\n' \
+          "deb ${NEXUS_URL}/repository/debian/debian bookworm main" \
+          "deb ${NEXUS_URL}/repository/debian/debian bookworm-updates main" \
+          "deb ${NEXUS_URL}/repository/security.debian.org/debian-security bookworm-security main" \
+          > /etc/apt/sources.list; \
+        ;; \
+      ubuntu) \
+        printf '%s\n' \
+          "deb ${NEXUS_URL}/repository/ubuntu jammy main restricted universe multiverse" \
+          "deb ${NEXUS_URL}/repository/ubuntu jammy-updates main restricted universe multiverse" \
+          "deb ${NEXUS_URL}/repository/ubuntu jammy-backports main restricted universe multiverse" \
+          "deb ${NEXUS_URL}/repository/security.ubuntu.com/ubuntu jammy-security main restricted universe multiverse" \
+          > /etc/apt/sources.list; \
+        ;; \
+      *) echo "Unsupported DISTRO: $DISTRO" >&2; exit 2 ;; \
+    esac; \
+    find /etc/apt/sources.list.d -mindepth 1 -maxdepth 1 -type f -delete 2>/dev/null || true; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      ca-certificates \
+      curl \
+      fd-find \
+      git \
+      gzip \
+      python3 \
+      python3-venv \
+      ripgrep \
+      tar \
+      unzip \
+      xz-utils; \
+    find /var/lib/apt/lists -mindepth 1 -delete
+
+RUN --mount=type=secret,id=internal_ca,required=false \
+    set -eux; \
+    if [ -s /run/secrets/internal_ca ]; then \
+      cp /run/secrets/internal_ca /usr/local/share/ca-certificates/internal-ca.crt; \
+      update-ca-certificates; \
+    fi
+
+RUN set -eux; \
+    node_archive="node-v${NODE_VERSION}-linux-x64.tar.xz"; \
+    curl --fail --location --show-error \
+      "${NEXUS_URL}/repository/nodejs.org/dist/v${NODE_VERSION}/${node_archive}" \
+      --output "/tmp/${node_archive}"; \
+    echo "${NODE_SHA256}  /tmp/${node_archive}" | sha256sum --check --strict; \
+    tar -xJf "/tmp/${node_archive}" -C /usr/local --strip-components=1; \
+    rm "/tmp/${node_archive}"; \
+    node --version; \
+    npm --version
+
+RUN set -eux; \
+    nvim_appimage="/tmp/nvim-linux-x86_64.appimage"; \
+    curl --fail --location --show-error \
+      "${NEXUS_URL}/repository/github.com/neovim/neovim/releases/download/v${NEOVIM_VERSION}/nvim-linux-x86_64.appimage" \
+      --output "$nvim_appimage"; \
+    echo "${NEOVIM_SHA256}  ${nvim_appimage}" | sha256sum --check --strict; \
+    chmod +x "$nvim_appimage"; \
+    cd /tmp; \
+    "$nvim_appimage" --appimage-extract >/dev/null; \
+    mv /tmp/squashfs-root /opt/nvim; \
+    ln -s /opt/nvim/AppRun /usr/local/bin/nvim; \
+    rm "$nvim_appimage"; \
+    nvim --version | head -1
+
+RUN useradd --uid 1000 --create-home --shell /bin/bash nvimtest
+
+COPY --chown=nvimtest:nvimtest .config/nvim /home/nvimtest/.dotfiles/.config/nvim
+COPY --chown=nvimtest:nvimtest scripts/nvim-offline-prime.sh /home/nvimtest/.dotfiles/scripts/nvim-offline-prime.sh
+COPY --chown=nvimtest:nvimtest scripts/lib/nvim-offline-profile.sh /home/nvimtest/.dotfiles/scripts/lib/nvim-offline-profile.sh
+
+USER nvimtest
+WORKDIR /home/nvimtest/.dotfiles
+
+ENV HOME=/home/nvimtest \
+    NVIM_OFFLINE=1 \
+    NVIM_NEXUS_URL=${NEXUS_URL} \
+    NVIM_GITHUB_RELEASE_BASE_URL=${NEXUS_URL}/repository/github.com \
+    NVIM_NEXUS_CORTEX_DEBUG_URL=${NEXUS_URL}/repository/marketplace.visualstudio.com/_apis/public/gallery/publishers/marus25/vsextensions/cortex-debug/1.12.1/vspackage \
+    NVIM_NEXUS_PYPI_URL=${NEXUS_URL}/repository/pypi/simple \
+    NVIM_NEXUS_NPM_URL=${NEXUS_URL}/repository/npm \
+    PIP_TRUSTED_HOST=${NEXUS_HOST} \
+    GIT_TERMINAL_PROMPT=0 \
+    GIT_PROGRESS_DELAY=999999
+
+RUN --mount=type=secret,id=git_config,target=/home/nvimtest/.gitconfig,uid=1000,gid=1000,mode=0400,required=true \
+    set -eu; \
+    for source_url in \
+      https://github.com/nvim-lua/plenary.nvim.git \
+      https://github.com/tree-sitter/tree-sitter-c.git; do \
+      git ls-remote --exit-code "$source_url" HEAD >/dev/null; \
+    done; \
+    ./scripts/nvim-offline-prime.sh
+
+RUN test "$(nvim --version | head -1)" = "NVIM v${NEOVIM_VERSION}"; \
+    test "$(node --version)" = "v${NODE_VERSION}"
+
+CMD ["nvim", "--headless", "--clean", "+lua print('offline Docker validation image is ready')", "+qa"]
