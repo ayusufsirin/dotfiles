@@ -19,25 +19,25 @@ local function refresh_restored_buffers()
     if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == "" then
       local name = vim.api.nvim_buf_get_name(bufnr)
       if name ~= "" then
-        if vim.bo[bufnr].filetype == "" then
-          vim.api.nvim_buf_call(bufnr, function()
+        vim.api.nvim_buf_call(bufnr, function()
+          if vim.bo[bufnr].filetype == "" then
             vim.cmd("filetype detect")
-          end)
-        end
+          end
 
-        vim.api.nvim_exec_autocmds("BufReadPost", {
-          buffer = bufnr,
-          modeline = false,
-        })
-
-        if vim.bo[bufnr].filetype ~= "" then
-          vim.api.nvim_exec_autocmds("FileType", {
+          vim.api.nvim_exec_autocmds("BufReadPost", {
             buffer = bufnr,
             modeline = false,
           })
-        end
 
-        pcall(vim.treesitter.start, bufnr)
+          if vim.bo[bufnr].filetype ~= "" then
+            vim.api.nvim_exec_autocmds("FileType", {
+              buffer = bufnr,
+              modeline = false,
+            })
+          end
+
+          pcall(vim.treesitter.start, bufnr)
+        end)
       end
     end
   end

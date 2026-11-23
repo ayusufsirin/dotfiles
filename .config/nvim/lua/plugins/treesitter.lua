@@ -25,6 +25,18 @@ return {
             end
           end
         end
+
+        -- shortcut: adapt the frozen plugin's downcase! on 0.12; remove when migrating to main.
+        vim.treesitter.query.add_directive("downcase!", function(match, _, bufnr, predicate, metadata)
+          local id = predicate[2]
+          local nodes = match[id]
+          if not nodes or #nodes == 0 then
+            return
+          end
+          local text = vim.treesitter.get_node_text(nodes[#nodes], bufnr, { metadata = metadata[id] }) or ""
+          metadata[id] = metadata[id] or {}
+          metadata[id].text = text:lower()
+        end, { force = true })
       end
 
       if offline.enabled() then
